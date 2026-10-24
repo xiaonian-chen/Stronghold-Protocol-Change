@@ -1,0 +1,15 @@
+{
+  "id": "clone",
+  "name": "Clone Mode",
+  "version": "1.0.0",
+  "author": "20p",
+  "description": "Clone mode: all 4 players share the same band + operators.",
+  "enabled": true,
+  "type": "gamemode",
+  "displayName": "克隆模式",
+  "config": {
+    "poolScale": { "type": "select", "label": "干员池倍率", "default": 4, "options": [4, 5, 6, 7, 8], "locked": true, "param": "scale" },
+    "bossHpMult": { "type": "select", "label": "首领生命", "default": 6, "options": [6, 12, 18, 24, 30, 36, 48, 60, 72, 84, 96, 108, 120], "locked": true, "lockedLabel": "人数×6（默认）", "param": "mult" },
+    "duckReplaceMax": { "type": "select", "label": "鸭爵上限", "default": 0, "options": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], "locked": true, "lockedLabel": "按人数（默认）", "param": "max" }
+  }
+}

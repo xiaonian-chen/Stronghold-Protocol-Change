@@ -1,0 +1,10 @@
+{
+  "id": "dupBand",
+  "name": "重复策略",
+  "version": "1.0.0",
+  "author": "20p",
+  "description": "允许队友在策略界面选择已被队友选过的策略（原版一人一个策略不可重复）",
+  "enabled": true,
+  "type": "gamemode",
+  "displayName": "重复策略"
+}

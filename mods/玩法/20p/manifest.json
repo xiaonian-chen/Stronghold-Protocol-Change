@@ -1,0 +1,15 @@
+{
+  "id": "20p",
+  "name": "20人扩展",
+  "version": "1.0.0",
+  "author": "20p",
+  "description": "20人多人模式扩展：MAX_SEATS=20、分组共享牌库、多人最终围攻、默契集结阶段等",
+  "enabled": true,
+  "type": "playstyle",
+  "displayName": "20人模式",
+  "config": {
+    "capacity": { "type": "select", "label": "人数上限", "default": 4, "options": [4, 8, 10, 16, 20], "param": "capacity" },
+    "bossHitLimit": { "type": "toggle", "label": "首领限伤", "default": false, "param": "enabled" },
+    "disableFlying": { "type": "toggle", "label": "禁用飞行", "default": true, "param": "enabled" }
+  }
+}

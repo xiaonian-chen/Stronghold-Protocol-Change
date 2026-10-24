@@ -1,0 +1,415 @@
+# 上游更新适配流程（Git 版 · 三层完整流程）
+# 最后更新：2026-10-24
+# 配套文档：上游更新指南.txt（通俗版）、核心层改动记录-v0.3.1-20p.txt（改动详情）
+
+## 概述
+
+2026-10-24 重构：将 Stronghold-Protocol/ 从"裸文件副本"改为 Git 仓库，追踪上游。
+上游通过 GitHub Releases 发布稳定版（打 tag）。
+
+完整更新分三层递进：
+  第一层 — 核心合并（Git 自动）
+  第二层 — mod-framework 框架兼容性检查
+  第三层 — 逐个 mod 适配验证
+
+不再需要旧版的"还原 hook → 更新包 → 重打 hook"三步流程（update-prep.js/update-finish.js 已删除）。
+
+## 新旧流程对比
+
+  旧版（已删除）：
+    1. node update-prep.js      还原 7 个 hook 文件为原版
+    2. 手动解压更新包覆盖
+    3. 启动服务器过 MANIFEST 校验
+    4. node update-finish.js    重打 17 处 hook
+    5. gen-patches → check-patches → 人工合并 overrides
+
+  新版（当前）：
+    1. git fetch upstream --tags && git merge v0.3.x
+    2. 框架兼容性确认（patcher / modHook / gen-patches）
+    3. 逐 mod 跑 gen-patches → check-patches → 人工合并 → 验证
+
+
+═══════════════════════════════════════════════════════════
+  第一层：核心合并（Git 自动）
+═══════════════════════════════════════════════════════════
+
+── 步骤 1.1：发现新版本 ──
+
+  浏览器打开 https://github.com/sganggs/Stronghold-Protocol/releases
+  看到新版本号（如 v0.3.2）→ 开始流程
+
+── 步骤 1.2：拉取 + 合并 ──
+
+  cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+  git fetch upstream --tags
+  git log HEAD..v0.3.2 --oneline
+  git diff HEAD..v0.3.2 --stat
+  git merge v0.3.2
+
+  预期结果：
+    - 大部分文件自动合并
+    - 我们修改过的 10 个文件如有冲突会标 CONFLICT
+
+── 步骤 1.3：解决冲突（如有）──
+
+  冲突文件会标出 <<<<<<< (我们的) ======= (上游的) >>>>>>>
+
+  10 个可能冲突的文件及策略：
+    文件                             策略
+    ────────────────────────────────────────────────────────
+    server/lobby.js                 保留 modHook + businessHook，上游新逻辑合并
+    server/match/Match.js           保留 modHook emit
+    server/match/player/economy.js  保留 _effectiveShopSlots() 包装
+    server/match/match/phases.js    保留 modHook emit
+    server/match/finalAssault.js    保留 bossHp hook
+    server/sim/content/bands/meta.js 保留 duckReplace hook
+    scripts/launch.mjs              保留 20p-loader --import 入口
+    public/js/ui/detailPanel.js     保留 desc||descRaw
+    public/js/render/app.js         保留 ++layerPopSeq
+    data/garrisons.json             保留 clementia 数据记录
+
+  解决后：
+    git add .
+    git commit -m "merge upstream <版本号>"
+
+── 步骤 1.4：MANIFEST 校验 ──
+
+  如果 MANIFEST.json 校验导致启动失败：
+    A) 删除 MANIFEST.json（推荐）
+    B) 用旧版流程：还原 → 启动过校验 → 重打 hook
+
+
+═══════════════════════════════════════════════════════════
+  第二层：mod-framework 框架兼容性检查
+═══════════════════════════════════════════════════════════
+
+── 2.1 patcher.js — 运行时文件替换 ──
+
+  文件：mod-framework/lib/patcher.js
+  功能：启动时将 overrides/ 目录下的文件替换到 Node.js require 缓存中
+
+  检查方法：
+    启动服务器，看控制台是否有 [patcher] 相关警告/错误
+    - [patcher] MISSING  → 上游删了某个被覆盖的文件，评估 override 是否废弃
+    - 无报错              → patcher 正常
+
+  极端处理：
+    如果上游删了某个 overrides 覆盖的文件，而该 override 仍然需要：
+    考虑将 override 的内容改为 hook（运行时注入）方式，而非文件替换。
+
+── 2.2 modHook.js — 事件总线 ──
+
+  文件：mod-framework/modHook.js
+  功能：提供 on/emit/hook 钩子系统，mod 通过它拦截游戏逻辑
+
+  我们打在上游文件里的 emit 调用：
+    scripts/launch.mjs           — modHook 初始化
+    server/lobby.js              — lobbyStart, roomCreate, gameMode, businessHook
+    server/match/Match.js        — matchStart, matchEnd, bandDraft
+    server/match/match/phases.js — phase:* 系列
+    server/match/player/economy.js — shopOpen, shopClose
+    server/match/finalAssault.js — bossHp
+    server/sim/content/bands/meta.js — duckReplace
+
+  每个 emit 行已由 Git 合并保护。如果上游改了 emit 所在函数的签名或
+  调用时机，需要人工查看 git diff 确认。
+
+  快速检查：
+    cd Stronghold-Protocol
+    git diff HEAD~1..HEAD -- server/lobby.js server/match/Match.js \
+      server/match/match/phases.js server/match/player/economy.js \
+      server/match/finalAssault.js server/sim/content/bands/meta.js
+
+── 2.3 gen-patches / check-patches 工具 ──
+
+  这两个脚本遍历 overrides/ 目录，对每个覆盖的源文件计算 SHA-256，
+  与之前生成的 fingerprint.json 比对。
+
+  先跑一次看有无基础报错：
+    cd d:\yjw\Stronghold-Protocol-v0.3.1
+    node mod-framework/scripts/gen-patches.js 20p
+
+  如果报错（如找不到文件、目录结构变了），说明上游动了目录结构，
+  需要微调脚本或 override 路径。
+
+── 2.4 modManager.js — mod 加载器 ──
+
+  启动后看控制台应输出：
+    [mod-framework] loading mods...
+    [mod:20p] installed
+    [mod:clementia] installed
+    [mod:dupBand] installed
+
+  如有 mod 加载失败（如某 mod 依赖的函数在上游被删了），会在控制台报错。
+
+
+═══════════════════════════════════════════════════════════
+  第三层：逐个 Mod 适配验证
+═══════════════════════════════════════════════════════════
+
+  ═══════════════════════════════════════════════════════
+  Mod A：20p
+  ═══════════════════════════════════════════════════════
+
+    类型：房间容量 mod
+    核心层修改：2 个文件（Git 追踪，第一层处理）
+    覆盖文件：  24 个 overrides + 3 个非核心 public 文件
+
+    Override 文件（mods/玩法/20p/overrides/）：
+      server/http/static.js                    server/lobby.js
+      server/match/Match.js
+      server/match/audit.js                    server/match/choices.js
+      server/match/gamedata.js                 server/match/pool.js
+      server/match/unite.js                    server/match/waves.js
+      server/match/match/bossRounds.js         server/match/match/infra.js
+      server/match/match/phases.js             server/match/match/settle.js
+      server/match/match/setupVote.js          server/match/match/spDraft.js
+      server/match/match/unitePhase.js         server/match/match/views.js
+      server/match/player/acquire.js           server/match/player/basics.js
+      server/match/player/diy.js               server/match/player/economy.js
+      server/match/finalAssault.js
+      server/sim/damage.js                     server/sim/spec.js
+      shared/protocol.js
+
+    适配命令：
+      cd d:\yjw\Stronghold-Protocol-v0.3.1
+      node mod-framework/scripts/gen-patches.js 20p
+      node mod-framework/scripts/check-patches.js 20p
+
+    输出解读：
+      [OK]       → 兼容，无需处理
+      [CHANGED]  → 上游改了源文件，用 git diff 看改动内容，
+                    判断是否影响 20p 逻辑，需要的话合并到 overrides/ 对应文件
+      [MISSING]  → 上游删了源文件，评估该 override 是否可废弃或需改为 hook
+
+    验证清单：
+      □ 创建 20p 房间，poolGroups 分组正确
+      □ 首领限伤开关（bosshp）正常
+      □ 禁用飞行开关（nofly）正常
+      □ 联防随机化正常
+      □ 只显示 20p 模式，原版模式不可选
+
+  ═══════════════════════════════════════════════════════
+  Mod B：clementia
+  ═══════════════════════════════════════════════════════
+
+    类型：角色增强 mod
+    核心层修改：3 个文件（Git 追踪，第一层处理）
+    覆盖文件：  4 个 overrides
+
+    修改的核心文件：
+      public/js/ui/detailPanel.js  — desc||descRaw 优先级（原版是 descRaw||desc）
+      public/js/render/app.js      — layerPopSeq 使用 ++layerPopSeq 而非 layerPops.size
+      data/garrisons.json          — 新增 garrison_clementia_kills_a/b 两条数据记录
+
+    Override 文件（mods/扩展角色/clementia/overrides/）：
+      shared/diy.js                  — augmentDiyRecord 处理 _flags
+      server/sim/spec.js             — 特质生效逻辑
+      public/js/render/app/info.js   — 角色面板显示
+      public/js/ui/gameLogic/bonds.js — 盟约 UI
+
+    适配命令：
+      node mod-framework/scripts/gen-patches.js clementia
+      node mod-framework/scripts/check-patches.js clementia
+
+    验证清单：
+      □ 房间角色面板有克莱门莎图标
+      □ 选人界面正常选择克莱门莎
+      □ DIY 界面切换「原版/改版」「迅捷/突袭」
+      □ 进入战斗，击杀计数 + 盟约叠加正常
+
+  ═══════════════════════════════════════════════════════
+  Mod C：dupBand
+  ═══════════════════════════════════════════════════════
+
+    类型：gamemode 模式 mod
+    核心层修改：1 个文件（Git 追踪，第一层处理）
+    覆盖文件：  复用 20p 的 2 个 overrides
+
+    修改的核心文件：
+      server/lobby.js — 3 处改动：
+        L1027: setGameMode 支持 'dupBand'
+        L1449: 创建房间时 gameMode 写入 content
+        L1452: startMatch 时 rules.dupBand = true
+
+    复用 20p 的 override 文件（mods/玩法/20p/overrides/）：
+      server/lobby.js    — 3 处 dupBand 相关代码（在 20p 的 lobby override 里）
+      shared/protocol.js — room.setGameMode 校验含 'dupBand'
+
+    重要：这些 overrides 已在 20p 的 gen/check 流程中检查过指纹，
+    但只告诉你"源文件变了"——不会告诉你 dupBand 的改动是否被覆盖。
+    需要额外人工检查 20p overrides 中 dupBand 相关代码是否完整：
+
+      grep 'dupBand' mods/玩法/20p/overrides/server/lobby.js       → 应找到 3 处
+      grep 'dupBand' mods/玩法/20p/overrides/shared/protocol.js    → 应找到 1 处
+
+    验证清单：
+      □ 创建 dupBand 房间不报 invalid game mode
+      □ 乐队选择时队友可重复选相同策略
+
+  ═══════════════════════════════════════════════════════
+  Mod D：clone
+  ═══════════════════════════════════════════════════════
+
+    类型：gamemode 模式 mod（纯钩子，最干净）
+    核心层修改：无
+    覆盖文件：  无
+
+    只通过 modHook 事件系统运作，不修改任何上游文件。
+    框架层 modHook 正常则 clone 正常。
+
+    验证清单：
+      □ clone 房间可创建
+      □ 进游戏 4 人共享相同阵容
+
+
+═══════════════════════════════════════════════════════════
+  完整命令速查
+═══════════════════════════════════════════════════════════
+
+  ── 第一层：核心合并 ──
+  cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+  git fetch upstream --tags
+  git log HEAD..v0.3.2 --oneline
+  git merge v0.3.2
+  # → 解决冲突 → git add . ; git commit
+
+  ── 第二层：框架检查 ──
+  # 启动服务器，看控制台：
+  #   [patcher] 无 MISSING 警告
+  #   [mod-framework] loading mods... 无报错
+  #   [mod:20p] installed / [mod:clementia] installed / ...
+
+  ── 第三层：mod 适配 ──
+  cd d:\yjw\Stronghold-Protocol-v0.3.1
+  node mod-framework/scripts/gen-patches.js 20p
+  node mod-framework/scripts/check-patches.js 20p
+  # → 人工合并 [CHANGED] 的 overrides
+
+  node mod-framework/scripts/gen-patches.js clementia
+  node mod-framework/scripts/check-patches.js clementia
+  # → 人工合并 [CHANGED] 的 overrides
+
+  # dupBand：检查 20p overrides 中 dupBand 相关代码完整
+  # clone：无操作，启动即验证
+
+
+═══════════════════════════════════════════════════════════
+  Git 仓库结构说明
+═══════════════════════════════════════════════════════════
+
+  Stronghold-Protocol/ 目录：
+    .git/           — Git 仓库数据
+    .gitignore      — 忽略 node_modules/ *.log 等
+    upstream        — 远程：https://github.com/sganggs/Stronghold-Protocol.git
+
+  提交历史：
+    99fff1d (tag: v0.3.1-base)  upstream v0.3.1 (clean baseline)
+    1645488                      mods: 20p hooks + clementia + dupBand + ...
+    adf9749                      chore: remove node/ from repo + .gitignore
+    e6eb61d                      chore: remove dead code (AGENTS.md, README.md, test/)
+    2b85af9                      fix: restore plugins/_removed and _template
+    368bd29 (HEAD -> main)       fix: add ROOM_CAPACITIES and DEFAULT_SEATS
+
+  10 个被修改的文件（第二个 commit 的内容）：
+    scripts/launch.mjs                       — 20p-loader 入口
+    server/lobby.js                          — modHook + businessHook + dupBand
+    server/match/Match.js                    — modHook
+    server/match/player/economy.js           — _effectiveShopSlots()
+    server/match/match/phases.js             — modHook
+    server/match/finalAssault.js             — modHook bossHp
+    server/sim/content/bands/meta.js         — modHook duckReplace
+    public/js/ui/detailPanel.js              — clementia desc 优先级
+    public/js/render/app.js                  — clementia layerPopSeq
+    data/garrisons.json                      — clementia 运行时数据
+
+  后续新增修改的文件：
+    shared/constants.js                      — ROOM_CAPACITIES + DEFAULT_SEATS 导出
+      （修复禁用所有 mod 时 room.js 导入失败的崩溃）
+
+
+═══════════════════════════════════════════════════════════
+  工具说明
+═══════════════════════════════════════════════════════════
+
+  gen-patches.js   — 遍历 mod 的 overrides/，生成 SHA-256 指纹（仍在使用，第三层）
+  check-patches.js — 比对 fingerprint.json 与当前源文件（仍在使用，第三层）
+  test-mod.mjs     — mod-framework 冒烟测试，验证 modHook 等核心组件正常
+
+  update-prep.js   — 已删除（2026-10-24），由 Git v0.3.1-base tag 替代
+  update-finish.js — 已删除（2026-10-24），由 Git merge 自动保留 hook 替代
+
+
+═══════════════════════════════════════════════════════════
+  附录：mod-framework 核心组件说明
+═══════════════════════════════════════════════════════════
+
+  ## patcher.js — 运行时文件替换器
+
+    启动时从各 mod 的 overrides/ 目录读取文件，用完整内容替换
+    Node.js require 缓存中的上游文件。
+
+    路径映射规则：
+      mods/<mod>/overrides/server/xxx.js → Stronghold-Protocol/server/xxx.js
+      mods/<mod>/overrides/shared/xxx.js → Stronghold-Protocol/shared/xxx.js
+      mods/<mod>/overrides/public/xxx.js → Stronghold-Protocol/public/xxx.js
+
+  ## modHook.js — 事件总线
+
+    on(name, fn)   注册监听器
+    emit(name, ...args) 触发事件
+    hook(name, fn) 注册拦截器（可修改/阻止原始行为）
+
+    上游文件中的 emit 调用：
+      import modHook from '../../../mod-framework/modHook.js';
+      modHook.emit('businessHook', ...);
+
+  ## gen-patches.js — 指纹生成
+
+    为 mod 的每个 override 文件，计算对应上游源文件的 SHA-256，
+    存入 mods/<mod>/patches/fingerprint.json。
+
+  ## check-patches.js — 兼容性检查
+
+    读取 fingerprint.json 中的 SHA-256，与当前上游源文件比对，
+    输出 [OK] / [CHANGED] / [MISSING] 状态。
+
+
+═══════════════════════════════════════════════════════════
+  项目清理记录（2026-10-24）
+═══════════════════════════════════════════════════════════
+
+  已删除：
+    上游原版备份/           → Git tag v0.3.1-base 替代
+    更新脚本/               → 空目录，无内容
+    update-prep.js          → Git v0.3.1-base tag 替代
+    update-finish.js        → Git merge 自动保留 hook 替代
+    plugins/AGENTS.md       → AI 助手说明，运行时不读取
+    plugins/README.md       → 纯文档，运行时不读取
+    packs/README.md         → 纯文档，运行时不读取
+    test/                   → 测试辅助，运行时不引用
+
+  不能删（运行时依赖）：
+    plugins/_removed/       → Studio 删插件时移入此目录
+    plugins/_template/      → Studio 插件工坊读取模板文件
+      server/studio/templates/fx.js      → _template/cosmetic/media/sample.png
+      server/studio/templates/index.js   → _template/cosmetic/media/sample.*
+      server/studio/gameData.js          → _template/${folder}/${rel}
+
+  已移动：
+    Stronghold-Protocol/node/ → 项目根 node/（.gitignore 排除）
+
+  Git 提交历史（6 个 commit）：
+    368bd29  fix: add ROOM_CAPACITIES and DEFAULT_SEATS to shared/constants.js
+    2b85af9  fix: restore plugins/_removed and _template
+    e6eb61d  chore: remove dead code (AGENTS.md, README.md, test/)
+    adf9749  chore: remove node/ from repo + .gitignore
+    1645488  mods: 20p hooks + clementia + dupBand
+    99fff1d  (tag: v0.3.1-base) upstream v0.3.1 (clean baseline)
+
+  禁用所有 mod 崩溃修复（2026-10-24）：
+    问题：禁用所有 mod 后 room.js 导入 DEFAULT_SEATS / ROOM_CAPACITIES 失败
+    原因：mod-framework/public/js/screens/room.js 始终加载，
+          依赖 shared/constants.js 的这两个导出，但上游核心没有
+    修复：在核心 shared/constants.js 新增两行导出（默认值）
+    兼容：mod 启用时 override 版本覆盖核心，新增导出透明无影响

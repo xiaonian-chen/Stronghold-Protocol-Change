@@ -1,0 +1,8 @@
+{
+  "name": "dupBand-overlay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "重复策略 Mod — 允许队友选择相同的策略",
+  "main": "index.js"
+}

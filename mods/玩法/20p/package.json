@@ -1,0 +1,8 @@
+{
+  "name": "20p-overlay",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "20p 自定义功能覆盖层 — 不修改上游 Stronghold-Protocol/ 任何文件",
+  "main": "server.js"
+}

@@ -1,0 +1,372 @@
+===========================================================
+  上游更新指南 — Git 版（三层完整流程）
+  最后更新：2026-10-24
+===========================================================
+
+项目结构分三层，在上游更新时必须全部适配：
+
+  Stronghold-Protocol-v0.3.1/               -- 你的项目根目录
+  ├── Stronghold-Protocol/                  -- 【Git 仓库】第一层：上游核心
+  │   ├── .git/                             -- Git 历史 & 配置
+  │   ├── server/  public/  shared/ ...     -- 游戏源码（Git 管理）
+  │   └── ...
+  ├── mod-framework/                        -- 【安全区】第二层：mod 框架
+  │   ├── modHook.js                        -- 事件总线（钩子系统）
+  │   ├── modManager.js                     -- mod 加载器
+  │   ├── modServer.js                      -- mod 服务器入口
+  │   ├── lib/patcher.js                    -- 运行时文件替换
+  │   ├── scripts/gen-patches.js            -- 生成 override 指纹
+  │   ├── scripts/check-patches.js          -- 检查 override 兼容性
+  │   ├── scripts/test-mod.mjs              -- mod-framework 冒烟测试
+  │   └── ...
+  ├── mods/                                 -- 【安全区】第三层：各 mod
+  │   ├── 玩法/20p/         — 24 个 overrides，2 个核心层 hook 文件
+  │   ├── 模式/clone/       — 纯钩子型，不修改任何上游文件
+  │   ├── 模式/dupBand/     — 1 个核心文件 + 20p 的 2 个 overrides
+  │   └── 扩展角色/clementia/ — 4 个 overrides，3 个核心文件直接修改
+  ├── node/                                  -- 【安全区】项目自带 Node.js 运行时
+  ├── 描述文件/                              -- 【安全区】本文档所在
+  ├── package.json                          -- 【安全区】
+  └── 启动服务器（信任插件）.bat              -- 【安全区】
+
+
+===========================================================
+  核心机制：Stronghold-Protocol/ 现在是 Git 仓库
+===========================================================
+
+2026-10-24 重构：将 Stronghold-Protocol/ 从"裸文件副本"改为 Git 仓库。
+
+  Git 提交历史（6 个 commit）：
+    commit 1 (tag: v0.3.1-base) — upstream v0.3.1 (clean baseline)
+    commit 2                    — mods: 20p hooks + clementia + dupBand
+    commit 3                    — chore: remove node/ from repo + .gitignore
+    commit 4                    — chore: remove dead code (AGENTS.md, README.md, test/)
+    commit 5                    — fix: restore plugins/_removed and _template
+    commit 6 (HEAD)             — fix: add ROOM_CAPACITIES and DEFAULT_SEATS
+
+  远程源：
+    upstream → https://github.com/sganggs/Stronghold-Protocol.git
+
+  Git 自动处理第一层（核心合并），第二层和第三层仍需人工检查。
+
+
+===========================================================
+  完整更新流程（三层递进）
+===========================================================
+
+★ 重要：上游使用 GitHub Releases 发布稳定版，只合并打了 tag 的版本！
+   先浏览器打开 https://github.com/sganggs/Stronghold-Protocol/releases
+   看到新版本号（如 v0.3.2）再开始以下流程。
+
+
+───────────────────────────────────────────────
+  第一层：核心合并（Git 自动）
+───────────────────────────────────────────────
+
+  ── 1.0 发现新版本 ──
+
+    方式一（推荐）：浏览器打开 Releases 页面看版本号
+    方式二（订阅）：页面右上角 Watch → Custom → 勾选 Releases，自动邮件通知
+
+  ── 1.1 拉取 + 预览 ──
+
+    cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+    git fetch upstream --tags
+    git log HEAD..v0.3.2 --oneline
+    git diff HEAD..v0.3.2 --stat
+
+  ── 1.2 合并 ──
+
+    git merge v0.3.2
+
+  ── 1.3 解决冲突（如有）──
+
+    只有我们修改过的 11 个文件可能出现冲突：
+      server/lobby.js              scripts/launch.mjs
+      server/match/Match.js        server/match/match/phases.js
+      server/match/player/economy.js   server/match/finalAssault.js
+      server/sim/content/bands/meta.js
+      public/js/ui/detailPanel.js  public/js/render/app.js
+      data/garrisons.json          shared/constants.js
+
+    解决策略见下方「冲突处理指南」。
+    解决完后：git add . ; git commit -m "merge upstream v0.3.2"
+
+
+───────────────────────────────────────────────
+  第二层：mod-framework 框架兼容性检查
+───────────────────────────────────────────────
+
+  核心合并完后，需要确认 mod 框架的各组件仍然正常工作。
+
+  ── 2.1 检查 patcher.js 运行时替换 ──
+
+    mod-framework/lib/patcher.js 负责把 overrides/ 文件替换到运行时内存。
+    原理：启动时读取 overrides/ 下的文件，用其完整内容替换上游文件。
+    只要 overrides 里覆盖的文件路径在上游仍然存在，patcher 就正常。
+
+    极端情况：如果上游删除了某个被 overrides 覆盖的文件，patcher 会在
+    控制台打印 [patcher] MISSING 警告，此时需要评估该 override 是否废弃。
+
+  ── 2.2 检查 modHook.js 钩子系统 ──
+
+    mod-framework/modHook.js 是事件总线，提供：
+      modHook.on('hook:name', callback)   → 注册钩子
+      modHook.emit('hook:name', ...args)  → 触发钩子
+
+    我们打在上游文件里的 emit 调用（如 modHook.emit('match:start', match)）
+    已经由 Git 合并保护——只要合并时保留了我们的 emit 行就没事。
+
+    如果上游改了调用时机（比如 match:start 不再在某个位置触发），需人工
+    查看 git diff 确认 emit 所在上下文是否被破坏。
+
+  ── 2.3 检查 gen-patches / check-patches 工具 ──
+
+    这两个脚本依赖上游文件结构。如果上游改了目录组织，可能需要微调。
+    正常情况下不会出问题——先跑一下看看有无报错即可。
+
+  ── 2.4 确认 modManager.js 加载正常 ──
+
+    启动后看控制台，应能看到：
+      [mod-framework] loading mods...
+      [mod:20p] installed
+      [mod:clementia] installed
+      [mod:dupBand] installed
+      ...无报错
+
+
+───────────────────────────────────────────────
+  第三层：逐个 Mod 适配验证
+───────────────────────────────────────────────
+
+  ═══ Mod A：20p（27 个 overrides）═══
+
+    修改的核心文件（已在 Git 中，第一层处理）：
+      scripts/launch.mjs    — 20p-loader 入口
+      server/lobby.js       — businessHook、setGameMode 加 'clone'
+
+    Override 文件（mods/玩法/20p/overrides/，共 24 个）：
+      server/http/static.js
+      server/match/Match.js
+      server/match/audit.js, choices.js, gamedata.js, pool.js, unite.js, waves.js
+      server/match/match/bossRounds.js, infra.js, phases.js, settle.js,
+                        setupVote.js, spDraft.js, unitePhase.js, views.js
+      server/match/player/acquire.js, basics.js, diy.js, economy.js
+      server/match/finalAssault.js
+      server/sim/damage.js, spec.js
+      server/lobby.js
+      shared/protocol.js
+
+    适配步骤：
+      cd d:\yjw\Stronghold-Protocol-v0.3.1
+      node mod-framework\scripts\gen-patches.js 20p
+      node mod-framework\scripts\check-patches.js 20p
+
+      [OK]       → 兼容，无需处理
+      [CHANGED]  → 上游改了这个文件，用 git diff 看改动内容，
+                    判断是否影响 20p 逻辑，需要的话合并到 overrides/ 对应文件
+      [MISSING]  → 上游删了这个文件，评估 override 是否废弃
+
+    验证：
+      □ 创建 20p 房间，poolGroups 正确
+      □ 首领限伤开关正常
+      □ 禁用飞行开关正常
+      □ 联防随机化正常
+      □ 移除原版模式正常（只剩 20p 可选）
+
+  ═══ Mod B：clementia（4 个 overrides + 3 个核心文件）═══
+
+    修改的核心文件（已在 Git 中，第一层处理）：
+      public/js/ui/detailPanel.js   — desc||descRaw 优先级
+      public/js/render/app.js       — ++layerPopSeq
+      data/garrisons.json           — 克莱门莎特质数据
+
+    Override 文件（mods/扩展角色/clementia/overrides/，共 4 个）：
+      shared/diy.js
+      server/sim/spec.js
+      public/js/render/app/info.js
+      public/js/ui/gameLogic/bonds.js
+
+    适配步骤：
+      node mod-framework\scripts\gen-patches.js clementia
+      node mod-framework\scripts\check-patches.js clementia
+
+      （处理逻辑同 20p）
+
+    验证：
+      □ 房间角色列表能看到克莱门莎图标
+      □ 选人界面可以选克莱门莎
+      □ DIY 界面能切换原版/改版、迅捷/突袭
+      □ 进入战斗后击杀计数正常，盟约能叠加
+
+  ═══ Mod C：dupBand（1 个核心文件 + 复用 20p 的 2 个 overrides）═══
+
+    修改的核心文件（已在 Git 中，第一层处理）：
+      server/lobby.js  — gameMode 字段、setGameMode('dupBand') 校验、startMatch 规则
+
+    复用 20p 的 override 文件：
+      mods/玩法/20p/overrides/server/lobby.js   — 3 处 dupBand 相关代码
+      mods/玩法/20p/overrides/shared/protocol.js — room.setGameMode 校验含 'dupBand'
+
+    注意：这两个文件已在 20p 的 gen-patches/check-patches 中检查过，
+    但检查只告诉你文件变了，不会告诉你 20p 的改动是否与 dupBand 冲突。
+    需要额外人工确认：
+
+      a) 看 20p 的 overrides/server/lobby.js 中搜索 'dupBand'，确认 3 处改动仍在
+      b) 看 20p 的 overrides/shared/protocol.js 中 setGameMode 的校验是否含 'dupBand'
+
+    验证：
+      □ 创建 dupBand 房间时不会报 invalid game mode
+      □ 进入乐队选择，队友可以选和他人重复的策略
+
+  ═══ Mod D：clone（纯钩子，零上游修改）═══
+
+    无 override、无核心文件修改。只要 modHook 系统正常，clone 就正常。
+
+    验证：
+      □ clone 房间可创建
+      □ 进入游戏 4 人选牌相同
+
+
+===========================================================
+  冲突处理指南
+===========================================================
+
+当 git merge 报 CONFLICT 时：
+
+  a) 冲突原因
+     上游和我们各自修改了同一个文件的同一行/相邻行。
+     Git 无法自动决定用哪个版本，需要人工裁决。
+
+  b) 查看冲突
+     git status                        → 列出所有冲突文件
+     git diff                           → 查看冲突内容（<<<<<< ======= >>>>>>>）
+
+  c) 解决策略（按文件）
+     ──────────────────────────────────────────────────────────────
+     server/lobby.js             保留 businessHook/modHook，上游新功能合并
+     server/match/Match.js       保留 modHook emit
+     server/match/player/economy.js  保留 _effectiveShopSlots() 包装函数
+     server/match/match/phases.js    保留 hook emit
+     server/match/finalAssault.js    保留 bossHp hook
+     server/sim/content/bands/meta.js  保留 duckReplace hook
+     scripts/launch.mjs           保留 20p-loader --import 入口
+     public/js/ui/detailPanel.js  保留 desc||descRaw（非 descRaw||desc）
+     public/js/render/app.js      保留 ++layerPopSeq（非 layerPops.size）
+     data/garrisons.json          保留 clementia 数据记录
+     shared/constants.js          保留 ROOM_CAPACITIES 和 DEFAULT_SEATS 导出
+     ──────────────────────────────────────────────────────────────
+
+  d) 解决完所有冲突
+     git add .
+     git commit -m "merge upstream <版本号>"
+
+
+===========================================================
+  MANIFEST 校验说明
+===========================================================
+
+上游 update.js 可能检查 MANIFEST.json 文件完整性（SHA-256）。
+因为我们修改了 10 个核心文件，MANIFEST 校验会失败。
+
+  方案 A（推荐）：删除 MANIFEST.json，服务器通常不强制检查
+  方案 B（备用）：正常走 git merge 流程，无需额外操作
+
+
+===========================================================
+  常用 Git 命令速查
+===========================================================
+
+  cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+
+  # 查看所有发布版本
+  git fetch upstream --tags
+  git tag -l --sort=-v:refname | Select-Object -First 10
+
+  # 查看上游有无新版本（vs 当前）
+  git log HEAD..v0.3.2 --oneline
+
+  # 查看我们的改动
+  git log --oneline
+
+  # 查看某次修改的具体内容
+  git show <commit-hash>
+
+  # 查看某个文件我们改了哪里（vs 干净基线）
+  git diff HEAD~1..HEAD -- server/lobby.js
+
+  # 临时回到干净状态（测试上游原版是否正常）
+  git stash
+  # 测试完后恢复
+  git stash pop
+
+  # 放弃所有本地未提交修改（危险！仅确认不要了再用）
+  git checkout -- .
+
+
+===========================================================
+  总结：新版 vs 旧版
+===========================================================
+
+  操作                      旧版                              新版
+  ─────────────────────────────────────────────────────────────────────
+  第一层：核心更新             解压覆盖 → 还原 hook             git fetch + git merge v0.3.x
+                              启动 → 重打 hook                 （一条命令，冲突自动标）
+  第二层：框架检查             无（靠经验）                     逐个组件确认
+  第三层：mod 适配             gen/check-patches               gen/check-patches + 逐 mod 验证
+  获取版本                    下载 zip                        Releases页面 / git tags
+  冲突发现                    人肉对比 44 个文件               git 自动标出冲突行
+  回滚                        手动恢复备份                     git reset --hard HEAD~1
+  查看改动历史                 无                              git log / git diff
+  启动方式                    .bat 双击                        .bat 双击（不变）
+
+
+===========================================================
+  近期变更记录（2026-10-24）
+===========================================================
+
+1. Git 重构
+   - Stronghold-Protocol/ 变为 Git 仓库，追踪 upstream
+   - 提交 1（tag: v0.3.1-base）：upstream v0.3.1 干净基线
+   - 提交 2（HEAD）：10 个修改文件
+   - upstream remote 指向 https://github.com/sganggs/Stronghold-Protocol.git
+
+2. 流程优化
+   - 改用 Releases 标签更新（git merge v0.3.x），不直接合并 master
+   - 明确三层递进流程：核心 → 框架 → mod
+   - 逐个 mod 细化适配步骤和验证清单
+
+3. 项目清理（2026-10-24）
+   - 删除 上游原版备份/（Git tag v0.3.1-base 替代）
+   - 删除 更新脚本/ 空目录
+   - 删除 mod-framework/scripts/update-prep.js, update-finish.js（Git merge 替代）
+   - node/ 移出 Stronghold-Protocol/ 到项目根目录，.gitignore 排除
+   - 启动 .bat 路径同步更新
+   - 删除 Stronghold-Protocol/ 内死代码：
+     plugins/AGENTS.md、plugins/README.md、packs/README.md（纯文档）
+     test/（测试辅助，运行时不引用）
+   - ⚠️ plugins/_removed/ 和 plugins/_template/ 不能删！
+     Studio 插件工坊运行时依赖它们：
+       server/studio/templates/fx.js      → 读 _template/cosmetic/media/sample.png
+       server/studio/templates/index.js   → 读 _template/cosmetic/media/sample.*
+       server/studio/gameData.js          → 读 _template/${folder}/${rel}
+       server/studio/index.js             → 删插件时移入 _removed/
+
+4. 禁用所有 mod 启动崩溃修复（2026-10-24）
+   - 问题：禁用所有 mod 后，mod-framework/public/js/screens/room.js 始终加载，
+     依赖 shared/constants.js 的 DEFAULT_SEATS 和 ROOM_CAPACITIES 导出，
+     但上游核心 constants.js 没有这两个导出 → SyntaxError
+   - 修复：在 Stronghold-Protocol/shared/constants.js 新增两行导出：
+       export const ROOM_CAPACITIES = Object.freeze([4, 8, 10, 16, 20]);
+       export const DEFAULT_SEATS = 4;
+   - 兼容性：mod 启用时 override 版本覆盖核心版本，新增导出不影响 mod 运行；
+     mod 禁用时核心版本提供默认值，room.js 正常加载
+   - commit: 368bd29 fix: add ROOM_CAPACITIES and DEFAULT_SEATS
+
+  Git 提交历史（6 个 commit）：
+    368bd29  fix: add ROOM_CAPACITIES and DEFAULT_SEATS to shared/constants.js
+    2b85af9  fix: restore plugins/_removed and _template
+    e6eb61d  chore: remove dead code (AGENTS.md, README.md, test/)
+    adf9749  chore: remove node/ from repo + .gitignore
+    1645488  mods: 20p hooks + clementia + dupBand
+    99fff1d  (tag: v0.3.1-base) upstream v0.3.1 (clean baseline)

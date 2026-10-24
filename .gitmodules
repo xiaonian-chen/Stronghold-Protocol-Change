@@ -1,0 +1,3 @@
+[submodule "Stronghold-Protocol"]
+	path = Stronghold-Protocol
+	url = ./Stronghold-Protocol
