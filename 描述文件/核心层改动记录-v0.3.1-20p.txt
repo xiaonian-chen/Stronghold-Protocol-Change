@@ -4,7 +4,7 @@
 #       dupBand（setGameMode / startMatch 规则）
 #       clone（无核心层修改）
 # 用途：Git merge 冲突时对照参考（三层流程 → 第一层）
-# 最后更新：2026-10-24
+# 最后更新：2026-10-25
 
 
 ================================================================================
@@ -335,27 +335,47 @@ clementia 是第一个"角色类" mod（manifest.type = 'character'），为克�
 
 
 ================================================================================
-八、clementia _flags 透传链路（完整调用链）
+八、clementia _flags 透传链路（完整调用链 — 2026-10-25 修复后）
 ================================================================================
 
-_flags 从 DIY 界面 → 战斗引擎的完整路径：
+_flags 从 DIY 界面 → 战斗引擎的完整路径（所有断点已修复）：
 
   客户端：
     1. diyModel.js: DiyPick { charId, skillIndex, uniEquipId, _flags }
     2. lobby.js: freezeDiy() → setDiy() 保存到 player
     3. player/diy.js: diyRecordOf → augmentDiyRecord(rec, pick, elite)
        → bonds() 注入额外盟约，garrisonId() 注入特质
+       [59] kept 对象 _flags 透传修复
+    4. diy.js (客户端): diyRecordFor 缓存键追加 _flags
+       [60] 缓存键 |${pick._flags ?? ''} 修复
+
+  服务端 UnitInfo 输出：
+    5. player/round.js: battleInput() 从 player.diy 读取 pick
+       [53] u.diy 对象 _flags 透传修复
+    6. match/views.js: _diyInfo() 构造 UnitInfo
+       [51] diy 对象 _flags 透传修复
+    7. match/results.js: 战斗结果 diy
+       [52] diy 对象 _flags 透传修复
 
   服务端 BattleSpec：
-    4. player/round.js: battleInput() 从 player.diy 读取 pick
-    5. server/sim/spec.js: buildBattleSpec() 将 _flags 编入 BattleSpec
-    6. server/sim/spec.js: sanitizeUnitLoadout() 保留 _flags 越过 cleanDiyPick
+    8. server/sim/spec.js: buildBattleSpec() 将 _flags 编入 BattleSpec
+    9. server/sim/spec.js: sanitizeUnitLoadout() 保留 _flags 越过 cleanDiyPick
+       [54] cleanDiyPick 输出保留 _flags 修复
 
-  浏览器端（客户端战斗模拟）：
-    7. simLoader.js: 从 /data/garrisons.json 加载 → simdata.setSimData()
-    8. server/sim/simdata.js: getDiy() 构建 d.loadout.diy { charId, ..., _flags }
-    9. js/render/app/info.js: renderInfo() 保留 _flags 到 view info
-    → 面板读取 diy._flags → 显示正确的盟约列表
+  战斗引擎：
+    10. server/sim/simdata.js: getDiy() 构建 d.loadout.diy
+        [55] 缓存键追加 _flags + loadout.diy 包含 _flags 修复
+    11. public/js/battle/simHost.js: ownerOps 展开 u.def.loadout.diy
+        （无需修改，展开运算符自动包含 _flags）
+
+  客户端渲染：
+    12. public/js/render/app.js: 准备阶段 diy
+        [56] diy 对象 _flags 透传修复
+    13. public/js/ui/stats.js: 统计模块 diy
+        [57] diy 对象 _flags 透传修复
+    14. js/render/app/info.js: renderInfo() 保留 _flags 到 view info
+        [32] 已在 clementia override 中修复
+    → detailPanel.js → 面板读取 diy._flags → 显示正确的盟约列表 ✓
 
 
 ================================================================================
@@ -385,6 +405,25 @@ _flags 从 DIY 界面 → 战斗引擎的完整路径：
   问题6：generateClientGarrisonData 写入路径错误
     根因：路径计算少了一层 '..'，且 mod 的 public/data/ 不被 /data/ 路由映射
     修复：[37] 路径改为 resolve(__dirname, '..', '..', '..', ...)，写入项目 data/ 目录
+
+  问题7：克莱门莎战斗面板只显示单阿戈尔盟约（2026-10-25 修复）
+    根因：_flags 字段在 7 个位置被丢弃（详见第八节修复后链路）
+          核心根因：simdata.js getDiy 的 loadout.diy 不含 _flags，
+          且缓存键不含 _flags 导致不同改版选项命中同一缓存
+    修复：[51-57] 共 7 个位置添加 _flags 透传
+          [55] getDiy 缓存键追加 |f${pick?._flags ?? ''}
+
+  问题8：克莱门莎 garrison 叠层不触发（2026-10-25 修复）
+    根因：effectKey 'clementia_global_kills' 不在 INSTALLERS 映射中
+    修复：[61] 新增 clementia_global_kills 安装器，监听 kill 事件
+
+  问题9：克隆模式倾向盟约选择框文本不更新（2026-10-25 修复）
+    根因：privateView 没有输出 affinityBondId 字段
+    修复：[58] views.js 新增 affinityBondId: this.affinityBondId || null
+
+  问题10：20p 悬赏界面默认显示 A 组而非玩家所在分组（2026-10-25 修复）
+    根因：activeGroupIdx 初始化为 useState(0)
+    修复：[63] useEffect + groupInitRef 首次加载时自动切到玩家所在组
 
 
 ================================================================================
@@ -606,3 +645,99 @@ mod 系统引入后，客户端静态文件的请求被 tryServeModFile 拦截�
     兼容性：mod 启用时 override 版本覆盖核心版本，新增导出透明无影响；
             mod 禁用时核心版本提供默认值，room.js 正常加载。
     commit: 368bd29
+
+
+================================================================================
+十三、_flags 透传链路修复（2026-10-25）
+================================================================================
+
+克莱门莎改版模式的 _flags 字段在多个位置被丢弃，导致战斗面板只显示单阿戈尔盟约。
+以下为所有修复位置：
+
+[51] server/match/match/views.js — _diyInfo() _flags 透传
+    原：return p ? { charId: p.charId, skillIndex: p.skillIndex, uniEquipId: p.uniEquipId } : undefined;
+    改：return p ? { charId: p.charId, skillIndex: p.skillIndex, uniEquipId: p.uniEquipId,
+                     ...(Number.isInteger(p._flags) ? { _flags: p._flags } : {}) } : undefined;
+
+[52] server/match/results.js — 战斗结果 diy _flags 透传
+    同上模式，在 diy 对象中添加 _flags 展开运算符
+
+[53] server/match/player/round.js — 战斗单位初始化 diy _flags 透传
+    同上模式，在 u.diy 对象中添加 _flags 展开运算符
+
+[54] server/sim/spec.js — cleanDiyPick 保留 _flags
+    在 cleanDiyPick 函数输出中保留 _flags：
+      if (Number.isInteger(d._flags)) out._flags = d._flags;
+
+[55] server/sim/simdata.js — getDiy 缓存键 + loadout.diy _flags 透传
+    a) 缓存键追加 _flags：
+       原：`${id}|diy|${pick?.charId ?? ''}|...|p${pot}`
+       改：`${id}|diy|${pick?.charId ?? ''}|...|f${pick?._flags ?? ''}|p${pot}`
+    b) d.loadout.diy 包含 _flags：
+       const diyBase = { charId: rec.charId, skillIndex: rec.skill.index, uniEquipId: rec.module?.id ?? null };
+       if (Number.isInteger(pick?._flags) && pick._flags !== 0) diyBase._flags = pick._flags;
+
+[56] public/js/render/app.js — 准备阶段 diy _flags 透传
+    原：{ diy: { charId: pick.charId, skillIndex: pick.skillIndex ?? null, uniEquipId: pick.uniEquipId ?? null } }
+    改：{ diy: { charId: ..., skillIndex: ..., uniEquipId: ...,
+                 ...(Number.isInteger(pick._flags) && pick._flags !== 0 ? { _flags: pick._flags } : {}) } }
+
+[57] public/js/ui/stats.js — 统计模块 diy _flags 透传
+    同上模式，在 e.diy 对象中添加 _flags 展开运算符
+
+[58] server/match/player/views.js — privateView affinityBondId 输出
+    新增字段：affinityBondId: this.affinityBondId || null,
+    修复：克隆模式倾向盟约选择框文本不更新的问题
+
+[59] server/match/player/diy.js — setDiy kept 对象 _flags 透传
+    在 kept 对象构建中添加 _flags 透传
+
+[60] public/js/ui/gameLogic/diy.js — diyRecordFor 缓存键 _flags 追加
+    原：缓存键不含 _flags
+    改：缓存键追加 |${pick._flags ?? ''}
+    修复：相同角色不同改版选项时返回错误记录
+
+
+================================================================================
+十四、克莱门莎 garrison 叠层安装器（2026-10-25）
+================================================================================
+
+[61] server/sim/content/garrisons/battle.js — clementia_global_kills 安装器
+    新增 INSTALLERS.clementia_global_kills：
+      - 监听 kill 事件
+      - 任意友方击杀敌方时，所有克莱门莎 garrison 实例 cnt++
+      - 每 check_cnt（3）次击杀调用 fireGain
+      - fireGain → targetBonds(bond_self) → 克莱门莎自身所有已激活盟约
+      - amountOf(by_count) → 非精锐 +1 层，精锐 +2 层
+      - S.gainLayers → 给每个已激活盟约加对应层数
+
+
+================================================================================
+十五、20p 悬赏选择分组 UI（2026-10-25）
+================================================================================
+
+[62] mods/玩法/20p/overrides/server/match/match/spDraft.js — 分组悬赏选择服务端
+    重写 enterSpDraft()：
+      - 每组独立生成 6 个悬赏选项
+      - 各组独立随机选择顺序（rngDraft.shuffle）
+      - 各组并行调用 startSpTurn() 同时开始选择
+      - groups 数据结构：[{ id, pool, order, idx }, ...]
+
+[63] mods/玩法/20p/public/js/ui/choiceOverlay.js — 分组悬赏选择客户端 UI
+    新增功能：
+      - activeGroupIdx 状态管理（默认显示玩家所在分组）
+      - groupInitRef + useEffect 初始化逻辑（首次加载自动切到玩家所在组）
+      - 分组切换按钮（A组 0/3、B组 0/3）
+      - 组内玩家选择顺序列表（闪烁/绿色状态）
+      - 30 秒倒计时，超时自动随机选择
+      - 条件判断：groups && groups.length > 1 才显示分组 UI
+
+[64] mods/玩法/20p/public/js/ui/gameLogic/draft.js — 分组数据解析
+    新增 normalizeSpGroups 辅助函数，为客户端 UI 提供分组信息
+
+[65] mods/玩法/20p/public/css/screens/game-panels.css — 分组 UI 样式
+    新增样式类：
+      .spov__groups — 分组按钮容器
+      .spov__group-btn — 分组切换按钮（含进度 X/X）
+      .spov__group-order — 组内玩家选择顺序
+      .spov__player — 玩家名称方框（闪烁/绿色状态）

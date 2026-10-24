@@ -25,56 +25,54 @@ export class MatchSpDraft {
     });
     if (!pages || !pages.length) { this.beforePrepOffers(); return; }
 
-    // Merge all cards from all pool groups into one global card pool (re-indexed sequentially)
-    let mergedCards = [];
+    // Each group gets its own independent card pool and selection order
+    const spGroups = [];
     for (const g of groups) {
       const page = pages.find((p) => p.id === g.id);
-      if (!page || !Array.isArray(page.cards)) continue;
-      for (const card of page.cards) {
-        mergedCards.push({ ...card, idx: mergedCards.length });
-      }
+      if (!page || !Array.isArray(page.cards) || !page.cards.length) continue;
+      const order = g.order.slice();
+      if (!this.isSolo) this.rngDraft.shuffle(order);
+      this.prioritizeDraftOrder(order);
+      const cards = page.cards.map((c, i) => ({ ...c, idx: i }));
+      spGroups.push({
+        id: g.id,
+        playerIds: order.slice(),
+        order: order.slice(),
+        idx: 0,
+        family: page.family,
+        name: page.name,
+        desc: page.desc,
+        eventId: page.eventId,
+        cards,
+        taken: {},
+        picks: {},
+        untimed: this.soloUntimed,
+        turnDeadline: 0,
+        turnSeconds: 0,
+        timer: null,
+        token: 0,
+        done: false,
+      });
     }
-    if (!mergedCards.length) { this.beforePrepOffers(); return; }
+    if (!spGroups.length) { this.beforePrepOffers(); return; }
 
-    // Merge all players into one unified random selection order
-    let mergedOrder = [];
-    for (const g of groups) mergedOrder.push(...g.order);
-    if (!this.isSolo) this.rngDraft.shuffle(mergedOrder);
-    this.prioritizeDraftOrder(mergedOrder);
-
-    // Build display name list for client-side order UI
-    const displayOrder = mergedOrder.map((pid) => {
+    const allPicks = {};
+    const displayOrder = spGroups.flatMap((g) => g.order.map((pid) => {
       const ps = this.players.get(pid);
-      return { playerId: pid, name: ps?.playerName || ps?.name || pid };
-    });
-
-    const merged = {
-      id: 0,
-      playerIds: mergedOrder.slice(),
-      order: mergedOrder.slice(),
-      idx: 0,
-      cards: mergedCards,
-      taken: {},
-      picks: {},
-      untimed: this.soloUntimed,
-      turnDeadline: 0,
-      turnSeconds: 0,
-      timer: null,
-      token: 0,
-      done: false,
-    };
+      return { playerId: pid, name: ps?.playerName || ps?.name || pid, groupId: g.id };
+    }));
 
     this.phase = PHASE.SP_DRAFT;
     this.sp = installDraftFacade({
       ...pages[0],
       id: this.nextDraftId('sp'),
-      groups: [merged],
-      picks: {},
+      groups: spGroups,
+      picks: allPicks,
       untimed: this.soloUntimed,
       displayOrder,
     }, ['order', 'idx', 'cards', 'taken', 'turnDeadline', 'turnSeconds']);
     this.setDeadline(0);
-    this.startSpTurn(merged);
+    for (const g of spGroups) this.startSpTurn(g);
     this.markPublic();
   }
 

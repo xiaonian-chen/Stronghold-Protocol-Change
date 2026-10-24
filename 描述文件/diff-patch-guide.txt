@@ -1,5 +1,5 @@
 # 上游更新适配流程（Git 版 · 三层完整流程）
-# 最后更新：2026-10-24
+# 最后更新：2026-10-25
 # 配套文档：上游更新指南.txt（通俗版）、核心层改动记录-v0.3.1-20p.txt（改动详情）
 
 ## 概述
@@ -65,7 +65,7 @@
     server/sim/content/bands/meta.js 保留 duckReplace hook
     scripts/launch.mjs              保留 20p-loader --import 入口
     public/js/ui/detailPanel.js     保留 desc||descRaw
-    public/js/render/app.js         保留 ++layerPopSeq
+    public/js/render/app.js         保留 ++layerPopSeq + _flags 透传
     data/garrisons.json             保留 clementia 数据记录
 
   解决后：
@@ -188,6 +188,8 @@
       □ 禁用飞行开关（nofly）正常
       □ 联防随机化正常
       □ 只显示 20p 模式，原版模式不可选
+      □ 6 人以上悬赏选择分组 UI 正常（A组/B组按钮、进度、倒计时）
+      □ 各分组玩家进悬赏界面默认显示自己分组
 
   ═══════════════════════════════════════════════════════
   Mod B：clementia
@@ -217,6 +219,9 @@
       □ 选人界面正常选择克莱门莎
       □ DIY 界面切换「原版/改版」「迅捷/突袭」
       □ 进入战斗，击杀计数 + 盟约叠加正常
+      □ 战斗面板显示阿戈尔+不屈+迅捷/突袭（非单阿戈尔）
+      □ 非精锐特质每 3 击杀 +1 层，精锐每 3 击杀 +2 层
+      □ _flags 透传链路完整（详见核心层改动记录第八节）
 
   ═══════════════════════════════════════════════════════
   Mod C：dupBand
@@ -320,7 +325,7 @@
     server/match/finalAssault.js             — modHook bossHp
     server/sim/content/bands/meta.js         — modHook duckReplace
     public/js/ui/detailPanel.js              — clementia desc 优先级
-    public/js/render/app.js                  — clementia layerPopSeq
+    public/js/render/app.js                  — clementia layerPopSeq + _flags 透传
     data/garrisons.json                      — clementia 运行时数据
 
   后续新增修改的文件：

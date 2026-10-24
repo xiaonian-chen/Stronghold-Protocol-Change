@@ -1,6 +1,6 @@
 ===========================================================
   上游更新指南 — Git 版（三层完整流程）
-  最后更新：2026-10-24
+  最后更新：2026-10-25
 ===========================================================
 
 项目结构分三层，在上游更新时必须全部适配：
@@ -173,12 +173,14 @@
       □ 禁用飞行开关正常
       □ 联防随机化正常
       □ 移除原版模式正常（只剩 20p 可选）
+      □ 6 人以上悬赏选择分组 UI 正常
+      □ 各分组玩家进悬赏界面默认显示自己分组
 
   ═══ Mod B：clementia（4 个 overrides + 3 个核心文件）═══
 
     修改的核心文件（已在 Git 中，第一层处理）：
       public/js/ui/detailPanel.js   — desc||descRaw 优先级
-      public/js/render/app.js       — ++layerPopSeq
+      public/js/render/app.js       — ++layerPopSeq + _flags 透传
       data/garrisons.json           — 克莱门莎特质数据
 
     Override 文件（mods/扩展角色/clementia/overrides/，共 4 个）：
@@ -198,6 +200,8 @@
       □ 选人界面可以选克莱门莎
       □ DIY 界面能切换原版/改版、迅捷/突袭
       □ 进入战斗后击杀计数正常，盟约能叠加
+      □ 战斗面板显示阿戈尔+不屈+迅捷/突袭（非单阿戈尔）
+      □ 非精锐特质每 3 击杀 +1 层，精锐每 3 击杀 +2 层
 
   ═══ Mod C：dupBand（1 个核心文件 + 复用 20p 的 2 个 overrides）═══
 
@@ -252,7 +256,7 @@
      server/sim/content/bands/meta.js  保留 duckReplace hook
      scripts/launch.mjs           保留 20p-loader --import 入口
      public/js/ui/detailPanel.js  保留 desc||descRaw（非 descRaw||desc）
-     public/js/render/app.js      保留 ++layerPopSeq（非 layerPops.size）
+     public/js/render/app.js      保留 ++layerPopSeq + _flags 透传
      data/garrisons.json          保留 clementia 数据记录
      shared/constants.js          保留 ROOM_CAPACITIES 和 DEFAULT_SEATS 导出
      ──────────────────────────────────────────────────────────────
@@ -322,7 +326,7 @@
 
 
 ===========================================================
-  近期变更记录（2026-10-24）
+  近期变更记录（2026-10-25）
 ===========================================================
 
 1. Git 重构
@@ -361,7 +365,37 @@
        export const DEFAULT_SEATS = 4;
    - 兼容性：mod 启用时 override 版本覆盖核心版本，新增导出不影响 mod 运行；
      mod 禁用时核心版本提供默认值，room.js 正常加载
-   - commit: 368bd29 fix: add ROOM_CAPACITIES and DEFAULT_SEATS
+   - commit: 368bd29
+
+5. _flags 透传链路修复（2026-10-25）
+   - 问题：克莱门莎改版模式战斗面板只显示单阿戈尔盟约
+   - 根因：_flags 字段在 7 个位置被丢弃，simdata.js 缓存键不含 _flags
+   - 修复：共 10 个位置添加 _flags 透传（详见核心层改动记录第十三节）
+   - 涉及文件：
+     server/match/match/views.js（_diyInfo）
+     server/match/results.js
+     server/match/player/round.js
+     server/sim/spec.js（cleanDiyPick）
+     server/sim/simdata.js（getDiy 缓存键 + loadout.diy）
+     public/js/render/app.js
+     public/js/ui/stats.js
+     server/match/player/views.js（affinityBondId）
+     server/match/player/diy.js（kept _flags）
+     public/js/ui/gameLogic/diy.js（diyRecordFor 缓存键）
+
+6. 克莱门莎 garrison 叠层安装器（2026-10-25）
+   - 问题：击杀敌方后盟约层数不增加
+   - 根因：INSTALLERS 中缺少 clementia_global_kills 安装器
+   - 修复：在 battle.js 中新增安装器，监听 kill 事件
+
+7. 克隆模式倾向盟约文本修复（2026-10-25）
+   - 问题：选择后选择框文本不更新
+   - 修复：privateView 新增 affinityBondId 字段输出
+
+8. 20p 悬赏选择分组 UI（2026-10-25）
+   - 新增：6 人以上分组独立悬赏选择（A组/B组按钮、进度、倒计时）
+   - 优化：各分组玩家进悬赏界面默认显示自己分组
+   - 所有代码在 20p mod 目录，不影响核心层和其他模式
 
   Git 提交历史（6 个 commit）：
     368bd29  fix: add ROOM_CAPACITIES and DEFAULT_SEATS to shared/constants.js
