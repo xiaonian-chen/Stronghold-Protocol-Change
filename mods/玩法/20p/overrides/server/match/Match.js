@@ -453,6 +453,10 @@ export class Match {
 
     modHook.emit('match:init', this);
 
+    if (this.rules && 'bossHitLimit' in this.rules) {
+      this.gd._bossHitLimitEnabled = this.rules.bossHitLimit;
+    }
+
     this.phase = PHASE.LOBBY;
     this.round = 0;
     this.deadline = 0;
