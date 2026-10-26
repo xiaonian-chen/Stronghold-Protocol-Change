@@ -1,7 +1,7 @@
 {
   "mod": "20p",
   "upstreamVersion": "unknown",
-  "generated": "2026-10-25",
+  "generated": "2026-10-26",
   "files": {
     "server/data.js": "db7b777a353bad6f",
     "server/lobby.js": "69fccd2d7ad1421c",
@@ -12,16 +12,17 @@
     "server/match/match/platform.js": "d36556354dd59358",
     "server/match/match/setupVote.js": "7e5b114dedf69623",
     "server/match/match/spDraft.js": "9ee2e981fd199198",
+    "server/match/match/unitePhase.js": "05f0c530fa21f459",
     "server/match/match/views.js": "eff74012d853ec8b",
     "server/match/Match.js": "561ae48b5690c73b",
     "server/match/player/diy.js": "74fc0c3b1f839e6a",
-    "server/match/player/economy.js": "5fd179e32d932629",
+    "server/match/player/economy.js": "9c31949ad799e753",
     "server/match/pool.js": "5b5df53dab815231",
     "server/match/unite.js": "b42de7d12bdfc76e",
-    "server/sim/content/bands/meta.js": "aa49df0a88758245",
-    "server/sim/content/garrisons/battle.js": "240128628b803586",
+    "server/sim/content/bands/meta.js": "3e05b27759fe6fe3",
+    "server/sim/content/garrisons/battle.js": "adf927087195b3a8",
     "server/sim/spec.js": "cf2b3ca906efaa3f",
-    "shared/constants.js": "cdc88f1dfcc6395e",
+    "shared/constants.js": "4a5bef8770303321",
     "shared/diy.js": "51e914ac2f59b60c",
     "shared/protocol.js": "e5928e37f59db799"
   }

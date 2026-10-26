@@ -27,7 +27,7 @@
 
 项目结构分五层，在上游更新时必须逐层递进：
 
-  Stronghold-Protocol-v0.3.1/               -- 项目根目录
+  Stronghold-Protocol-v0.3.2/               -- 项目根目录
   ├── Stronghold-Protocol/                  -- 【Git 仓库】第一层：上游核心
   │   ├── .git/                             -- Git 历史 & 配置
   │   ├── scripts/                          -- 启动/安装脚本（含 20p-loader.mjs）
@@ -157,7 +157,7 @@
 
   ── 1.1 拉取 + 预览 ──
 
-    cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+    cd d:\yjw\Stronghold-Protocol-v0.3.2\Stronghold-Protocol
     git fetch upstream --tags
     git log HEAD..v0.3.2 --oneline
     git diff HEAD..v0.3.2 --stat
@@ -396,6 +396,13 @@
   版本漂移修复完后，先验证上游原版功能是否正常（不带 mod 逻辑）。
   确认基础功能没问题，再进入后续框架和 mod 检查。
 
+  ★ 快速跳过判断（v0.3.2→v0.3.3 实战总结）：
+    若 1.4 改动清单中不涉及插件系统架构（plugin API level 变更、
+    新增/删除插件 hook 点、协议字段变更），则本层仅需 3.1 启动验证，
+    3.2 的 L2 UI 验证可简化为"启动无报错 + 版本号正确"。
+    v0.3.3 实战：上游仅 bugfix（装备槽位/图标缓存/bench swap），
+    不涉及插件架构 → 3.1 通过即完成本层。
+
   ── 3.1 启动服务器，确认无报错 ──
 
     启动后看控制台，应无 SyntaxError / ReferenceError。
@@ -429,6 +436,14 @@
                              1.3 版本漂移、1.5 组件未生效
 
   插件功能确认后，检查 mod 框架各组件是否正常工作。
+
+  ★ 快速跳过判断（v0.3.2→v0.3.3 实战总结）：
+    mod-framework/ 是安全区，上游不触碰。只需确认 1.4 改动清单是否影响
+    patcher 运行。判断条件（全部满足则跳过本层）：
+      a) 上游未删除任何被 overrides 覆盖的文件（无 D 状态文件对应 override）
+      b) 上游未修改任何含 modHook.emit 的核心文件
+      c) 上游未改变目录结构（无新增/移除一级目录）
+    v0.3.3 实战：a)无删除 b)无emit改动 c)无目录变更 → 全部跳过。
 
   ── 4.1 检查 patcher.js 运行时替换 ──
 
@@ -477,6 +492,14 @@
     · 功能适配经验.txt → 各 mod 节（【二】20p、【三】clementia、【四】clone）：
                              该 mod 历史遇到的问题及经验
 
+  ★ 快速跳过判断（v0.3.2→v0.3.3 实战总结）：
+    只需检查 1.4 改动清单是否触及各 mod 的 override 文件。
+    对每个 mod，将改动清单与该 mod 的 overrides/ 文件列表取交集：
+      交集为空 → 该 mod 无需适配，跳过
+      交集非空 → 跑 gen-patches + check-patches，按 [CHANGED]/[MISSING] 处理
+    v0.3.3 实战：仅 shared/constants.js 在交集中（20p），
+    其余 mod 交集为空 → clementia/dupBand/clone 全部跳过。
+
   ═══ Mod A：20p（27 个 overrides）═══
 
     修改的核心文件（已在 Git 中，第一层处理）：
@@ -498,7 +521,7 @@
       shared/playerCapacity.js                 shared/protocol.js
 
     适配步骤：
-      cd d:\yjw\Stronghold-Protocol-v0.3.1
+      cd d:\yjw\Stronghold-Protocol-v0.3.2
       node mod-framework\scripts\gen-patches.js 20p
       node mod-framework\scripts\check-patches.js 20p
 
@@ -627,7 +650,7 @@
   常用 Git 命令速查
 ===========================================================
 
-  cd d:\yjw\Stronghold-Protocol-v0.3.1\Stronghold-Protocol
+  cd d:\yjw\Stronghold-Protocol-v0.3.2\Stronghold-Protocol
 
   # 查看所有发布版本
   git fetch upstream --tags
@@ -676,8 +699,29 @@
 
 
 ===========================================================
-  近期变更记录（2026-10-26）
-===========================================================
+  近期变更记录（2026-10-27）
+
+14. v0.3.3 上游适配 + 流程优化（2026-10-27）
+    五层流程执行结果：
+      第一层：git merge v0.3.3 成功，无冲突
+      第二层：仅 20p overrides/shared/constants.js 的 APP_VERSION 漂移，
+             已从 '0.3.2' 更新为 '0.3.3'，其余改动文件无 override 对应
+      第三层：服务器启动正常，v0.3.3 版本号显示正确，无报错
+      第四层：全部跳过（上游未删文件、未改emit、未改目录结构）
+      第五层：20p 22个[OK]，clementia 2个[OK]，dupBand/clone跳过
+
+    流程优化（新增三~五层快速跳过判断）：
+      第三层：若 1.4 改动清单不涉及插件系统架构，仅需启动验证
+      第四层：若上游未删override对应文件、未改emit、未改目录结构，全部跳过
+      第五层：将改动清单与各mod overrides取交集，交集为空则跳过该mod
+
+    v0.3.3 上游改动内容（6个提交）：
+      c7071fc75 fix: preserve equipment slot layout across shop upgrades
+      1c7c16f05 fix: key version-dependent renderer caches by art and data
+      b21ff2586 fix: allow full-bench swaps; update config
+      f07bdef3c Merge round53 icon cache fix into 0.3.3 hotfix
+      9f2203242 docs: record intentional first-period bench swaps
+      f07b89650 chore: prepare 0.3.3 hotfix release metadata
 
 13. L1 链路追踪排查（2026-10-26，第四轮）
     从第2层开始逐层完整验证，做真正的链路追踪而非只看代码逻辑自洽
