@@ -30,6 +30,9 @@ export function renderInfo(u) {
     defId: u.defId ?? null, name: u.name ?? '', tier: u.tier ?? 1, golden: !!u.golden, spine: u.spine ?? u.defId ?? null,
     avatar: u.avatar ?? u.defId ?? null, x: Number(u.x) || 0, y: Number(u.y) || 0, facing: u.facing === -1 ? -1 : 1,
     maxHp: Number(u.maxHp) || 1, boss: !!u.boss, motion: u.motion,
+    // the unit's OWN attack interval (UnitInfo.atkInterval, the sim's `s.interval` with its buffs): the view paces the
+    // attack clip over it (render/attackRate.js) — dropping it here sent every view back to the operator-record guess
+    atkInterval: Number.isFinite(u.atkInterval) && u.atkInterval > 0 ? u.atkInterval : undefined,
     // deploy direction of allies (UnitInfo.dir, DESIGN §3): the model (Back for UP, mirrored for LEFT) and the
     // ground wedge follow it; absent = unknown (legacy frames) → derived from `facing`, no wedge
     dir: typeof u.dir === 'string' ? u.dir : undefined,
@@ -53,7 +56,6 @@ export function renderInfo(u) {
     standInFor: typeof u.standInFor === 'string' && u.standInFor ? u.standInFor : undefined,
     // 0.2.0 自选编队: the pick of a DIY slot's unit (UnitInfo.diy { charId, skillIndex, uniEquipId }; spine / avatar / name
     // are already the operator's) — the detail card composes the operator from it, the data lookups follow it
-    // clementia mod: preserve _flags for bond augmentation (indomShip / raidShip)
     diy: u.diy && typeof u.diy === 'object' && typeof u.diy.charId === 'string'
       ? { charId: u.diy.charId, skillIndex: Number.isInteger(u.diy.skillIndex) ? u.diy.skillIndex : null, uniEquipId: typeof u.diy.uniEquipId === 'string' ? u.diy.uniEquipId : null, ...(Number.isInteger(u.diy._flags) ? { _flags: u.diy._flags } : {}) }
       : undefined,

@@ -38,8 +38,7 @@
 import { BOSS_ROW_OFFSET, COLS, BOSS_POOL_MIN_HP } from '../sim/constants.js';
 import { mirrorDir, normDir } from '../sim/dir.js';
 import { bossPoolShareOf } from './gamedata.js';
-import { coopHiddenLayerThreshold } from '../../shared/playerCapacity.js';
-import modHook from '../../../mod-framework/modHook.js';
+import { modHook } from '../../../mod-framework/modHook.js';
 
 /**
  * BOSS_HIT ticker thresholds (activity_table autoChessData.broadcastList comment_boss_hit_1..3, paramList 0.2 / 0.5 /
@@ -59,7 +58,15 @@ export function bossFieldPlacement(side, row, col, dir = 'RIGHT') {
   return side === 'R' ? { row: r, col: COLS - 1 - col, dir: mirrorDir(d) } : { row: r, col, dir: d };
 }
 
-/** Seeded initial pairing; `previous` carries player-id pairs through prep, combat and Hidden Core. */
+/**
+ * The seed salt of a boss round's pairing draw: the Final Assault's 'boss-pairs' (unchanged since 0.2.5), the Hidden
+ * Core its own `boss-pairs:<round>` — it draws pairs and sides anew (GitHub #845, DESIGN §35.27).
+ */
+export function bossPairSalt(gd, round) {
+  return round === gd.hiddenRound && round !== gd.bossRound ? `boss-pairs:${round}` : 'boss-pairs';
+}
+
+/** Seeded pairing; `previous` carries player-id pairs from a round's plan through its prep and combat. */
 export function pairPlayers(alive, rng, previous = null) {
   const sorted = alive.slice().sort((a, b) => a.seat - b.seat);
   const groups = [];
@@ -88,13 +95,9 @@ export function bossPoolHp(gd, bossId, aliveCount) {
   const tune = typeof gd.bossHpMul === 'function' ? gd.bossHpMul(bossId) : 1;
   const share = typeof gd.bossPoolShare === 'function' ? gd.bossPoolShare(aliveCount)
     : bossPoolShareOf(gd.mode && gd.mode.bossHpScale, gd.config && gd.config.bossHpScale, !!gd.isSolo, aliveCount);
-  const result = Math.max(1, Math.round(base * share * tune));
-  if (modHook.hasListeners('match:bossHp')) {
-    const ctx = { base, tune, share, result };
-    const override = modHook.emitUntil('match:bossHp', gd, bossId, aliveCount, ctx);
-    if (Number.isFinite(override)) return Math.max(1, Math.round(override));
-    return ctx.result;
-  }
+  let result = Math.max(1, Math.round(base * share * tune));
+  const hookResults = modHook.emit('match:bossHp', gd, bossId, aliveCount, { base, tune, share, result });
+  for (const r of hookResults) { if (typeof r === 'number' && r > 0) { result = r; break; } }
   return result;
 }
 
@@ -129,10 +132,10 @@ export class SharedBossPool {
  * @param {import('./gamedata.js').GameData} gd
  * @param {{ layerSum: number, teamLp: number }} s
  */
-export function hiddenEligible(gd, { layerSum, teamLp, playerCount = 4 }) {
+export function hiddenEligible(gd, { layerSum, teamLp }) {
   const hc = gd.hiddenCore;
   if (!gd.hiddenRound || !hc.difficulties.includes(gd.difficulty)) return false;
-  const threshold = gd.isSolo ? hc.single : coopHiddenLayerThreshold(hc.multi, playerCount);
+  const threshold = gd.isSolo ? hc.single : hc.multi;
   return layerSum > threshold && teamLp > hc.minTeamLpExclusive;
 }
 

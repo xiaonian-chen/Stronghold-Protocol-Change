@@ -1,0 +1,9 @@
+{
+  "mod": "clementia",
+  "upstreamVersion": "unknown",
+  "generated": "2026-10-25",
+  "files": {
+    "server/sim/spec.js": "cf2b3ca906efaa3f",
+    "shared/diy.js": "51e914ac2f59b60c"
+  }
+}

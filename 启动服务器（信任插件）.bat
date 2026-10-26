@@ -57,11 +57,28 @@ if %errorlevel% equ 0 (
 
 rem ============================================================
 rem  Mod 模式 — 通过 mod-framework/modServer.js 启动
+rem  --import 注册模块解析钩子，使服务端 override 文件生效
+rem  modServer.js 同时处理：mod 钩子注册 + 客户端文件服务
 rem ============================================================
 :startMod
 set "SP_20P=1"
 set "SP_PLUGIN_SCRIPTS=trusted-force"
-goto :startVanilla
+set "PORT=%PORT%"
+if "%MODE%"=="0" set "SP_TEST_MODE=force"
+cd /d "%~dp0"
+
+rem 运行上游 setup（依赖安装、资源下载等）
+echo   正在准备运行环境...
+node "%~dp0Stronghold-Protocol\tools\setup.mjs" --quiet
+if errorlevel 1 (
+  echo.
+  echo   环境准备失败，请检查上方错误信息。
+  pause
+  exit /b 1
+)
+
+node --import "./Stronghold-Protocol/scripts/20p-loader.mjs" "./mod-framework/modServer.js"
+goto :end
 
 rem ============================================================
 rem  原版上游模式 — 走上游 launcher

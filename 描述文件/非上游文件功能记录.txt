@@ -1,0 +1,517 @@
+# 非上游文件功能记录 — 记录所有非上游文件基于上游添加的内容和实现的功能
+# 用途：记录所有非上游文件基于上游添加的内容和实现的功能
+#       以防更新上游时遗漏这部分功能
+# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复 + 局内界面盘点）
+
+
+================================================================================
+一、文件类型区分
+================================================================================
+
+  A-type：mod 特有文件，上游无同名对应
+    → 不受 gen-patches/check-patches 检查
+    → 上游更新时不会被覆盖，但可能因上游导出变化而 SyntaxError
+    → 更新策略：以新版上游为基准重建 + 保留 mod 特有逻辑
+
+  B-type：mod 覆盖上游同名文件（overrides/ 目录）
+    → 受 gen-patches/check-patches 检查（SHA-256 指纹比对）
+    → 上游更新时可能 [CHANGED]，需手动合并
+    → 更新策略：diff 上游新版 vs mod 版本，合并上游新逻辑 + 保留 mod 改动
+
+
+================================================================================
+二、mod-framework/（框架层）
+================================================================================
+
+  ── mod-framework/lib/patcher.js ──
+    功能：运行时文件替换器
+    机制：启动时从各 mod 的 overrides/ 目录读取文件，用完整内容替换
+          Node.js require 缓存中的上游文件
+    路径映射：
+      mods/<mod>/overrides/server/xxx.js → Stronghold-Protocol/server/xxx.js
+      mods/<mod>/overrides/shared/xxx.js → Stronghold-Protocol/shared/xxx.js
+      mods/<mod>/overrides/public/xxx.js → Stronghold-Protocol/public/xxx.js
+
+  ── mod-framework/modHook.js ──
+    功能：事件总线
+    API：
+      on(name, fn)    注册监听器
+      emit(name, ...args)  触发事件
+      hook(name, fn)  注册拦截器（可修改/阻止原始行为）
+    上游文件中的调用方式：
+      import modHook from '../../../mod-framework/modHook.js';
+      modHook.emit('businessHook', ...);
+
+  ── mod-framework/scripts/gen-patches.js ──
+    功能：指纹生成
+    机制：为 mod 的每个 override 文件，计算对应上游源文件的 SHA-256，
+          存入 mods/<mod>/patches/fingerprint.json
+
+  ── mod-framework/scripts/check-patches.js ──
+    功能：兼容性检查
+    机制：读取 fingerprint.json 中的 SHA-256，与当前上游源文件比对，
+          输出 [OK] / [CHANGED] / [MISSING] 状态
+
+  ── mod-framework/modManager.js ──
+    功能：mod 加载器
+    机制：读取 mods/ 目录，按配置启用/禁用 mod，调用 mod 的 install() 函数
+
+  ── mod-framework/modServer.js ──
+    功能：mod 文件服务 + 服务器入口
+    机制：HTTP 请求时按 reverse load order 返回 mod 的 public/ 文件
+    加载顺序：clementia → clone → dupBand → 20p
+    文件服务优先级：mod-framework > 20p > dupBand > clone > clementia
+    路径映射：
+      mod-framework/public/ → / (最高优先级，统一 room.js/CSS)
+      mod/<mod>/public/    → / (mod 特有客户端文件)
+      mod/<mod>/shared/    → /shared/ (mod 共享代码)
+      mod/<mod>/overrides/ → / (覆盖上游文件，server/→/server/, js/→/js/)
+
+  ── mod-framework/check-mods.js ──
+    功能：mod 启用检测（供 .bat 调用）
+    机制：检查 config.json 中是否有 mod 启用
+    退出码：0 = 至少一个 mod 启用，1 = 无 mod 启用或配置不存在
+
+  ── mod-framework/config-ui.js ──
+    功能：mod 配置 Web UI
+    机制：启动临时 HTTP 服务器，打开浏览器页面供用户启用/禁用 mod，
+          保存 config.json 后退出。在主服务器启动前调用
+
+  ── mod-framework/public/js/ui/cloneAffinityPicker.js（A-type）──
+    功能：克隆模式倾向盟约选择器
+    机制：在 TopBar 右侧 ready 按钮下方显示紧凑下拉框，
+          每个盟约有图标，模式禁用的盟约显示删除线+排到底部
+    仅在 clone 模式下显示（room.gameMode === 'clone'）
+
+  ── mod-framework/public/js/screens/game.js（B-type，覆盖上游）──
+    基于上游添加：
+      · import CloneAffinityPicker from '../ui/CloneAffinityPicker.js'【clone】
+      · 渲染 CloneAffinityPicker 组件（克隆模式倾向盟约选择）【clone】
+    更新上游时注意：必须保留 CloneAffinityPicker 导入和渲染
+
+  ── mod-framework/public/js/screens/bandDraft.js（B-type，覆盖上游）──
+    基于上游添加：
+      · clone draft 投票逻辑（clone 模式下策略选择投票机制）【clone】
+    更新上游时注意：必须保留 clone 投票逻辑
+
+  ── mod-framework/public/js/screens/room.js（B-type，覆盖上游）──
+    基于上游添加：
+      · 20p/clone 模式切换 UI【20p/clone】
+      · ConfigSelect 组件（20p 分组配置选择）【20p】
+    更新上游时注意：必须保留模式切换和 ConfigSelect 逻辑
+
+  ── mod-framework/public/css/screens/room.css（B-type，覆盖上游）──
+    基于上游添加：
+      · .rs-clock__ver 样式（版本标签样式）
+    更新上游时注意：必须保留 .rs-clock__ver 样式
+
+
+================================================================================
+三、mods/玩法/20p/（20 人模式扩展）
+================================================================================
+
+  ── mod 入口：mods/玩法/20p/index.js ──
+    功能：20p mod 安装入口
+    注册的 hook：
+      · lobby:beforeMatch — 注入 20p 规则（poolGroupSizes、首领限伤开关等）【20p】
+                            + clone/dupBand 规则注入【clone/dupBand】
+      · match:init — 设置 _20pActive 标志【20p】
+      · _effectiveShopSlots — 20 人模式下商店槽位扩展【20p】
+      · phase:bandDraft:enter — 策略阶段拦截【20p】
+      · match:bossHp — 首领 HP 限伤【20p】
+      · match:duckReplace — 鸭替换（克隆模式核心机制）【clone】
+
+  ── B-type override 文件（28 个）──
+
+    mods/玩法/20p/overrides/server/lobby.js
+      基于上游添加：20p 房间创建逻辑【20p】
+                      + dupBand 模式 dispatch【dupBand】
+                      + clone 规则注入【clone】
+                      + freezeDiy 保留 _flags 字段【clementia】
+      更新上游时注意：必须保留 20p/dupBand/clone 逻辑 + freezeDiy _flags 保留
+
+    mods/玩法/20p/overrides/server/data.js
+      基于上游添加：20p 数据加载逻辑
+
+    mods/玩法/20p/overrides/server/match/Match.js
+      基于上游添加：_20pActive 标志 + match:init 事件触发 + 联防轮次逻辑
+                      + 禁用飞行类敌人（Object.defineProperty 遮蔽 factions getter）【20p】
+                      + Boss 限伤开关【20p】
+      更新上游时注意：必须保留 _20pActive + 禁用飞行 + Boss 限伤逻辑
+
+    mods/玩法/20p/overrides/server/match/match/spDraft.js
+      基于上游添加：poolGroups 分组悬赏逻辑 + deadline 超时 + 分组轮转
+                      + 每组独立 _turnToken/_turnTimer（避免多组并发冲突）【20p】
+                      + 分组模式统一 30s 计时（spFirst = 30）【20p】
+      ⚠ rollPool 完整性：原 8 行残缺实现（仅 items 模式）已替换为原版完整实现
+        （支持 weighted/items/默认池抽取三种模式），详见功能适配经验.txt → 0.11
+      ⚠ 分组 family 一致性：原实现每组独立调用 generateDraft() 导致各组随机到不同
+        family（A组全道具/B组全悬赏/C组全战术），已修复为统一先决定 family 再为
+        各组用 buildCards() 生成同 family 卡牌，详见功能适配经验.txt → 0.12
+      更新上游时注意：必须保留分组逻辑 + 独立 token/timer + 30s 计时
+                      + rollPool 三种调用模式完整性（不可再截断为仅 items）
+                      + 分组 family 统一决定（不可每组独立 generateDraft）
+
+    mods/玩法/20p/overrides/server/match/match/unitePhase.js（⚠ 新增，上游无此文件）
+      功能：联防多轮推进（2026-10-26 新增）
+      机制：拦截 settle 调用，实现 _uniteNextOrSettle：
+            当前轮 < 总轮次 → 重置倒计时 + 推进轮次
+            当前轮 = 总轮次 → 执行原 settle
+      基于上游添加：整个文件为新增，上游无 unitePhase.js
+      更新上游时注意：如果上游新增同名文件需合并；否则保留此文件
+
+    mods/玩法/20p/overrides/server/match/match/phases.js
+      基于上游添加：联防多轮次支持（roundsMax）
+
+    mods/玩法/20p/overrides/server/match/match/views.js
+      基于上游添加：联防轮次输出（round/roundsMax）+ 每组 turnDeadline 序列化
+
+    mods/玩法/20p/overrides/server/match/match/setupVote.js
+      基于上游添加：20p 投票设置
+
+    mods/玩法/20p/overrides/server/match/match/platform.js
+      基于上游添加：20p 平台逻辑
+
+    mods/玩法/20p/overrides/server/match/player/economy.js
+      基于上游添加：20 人商店槽位扩展（_effectiveShopSlots）
+
+    mods/玩法/20p/overrides/server/match/player/diy.js
+      基于上游添加：20p DIY 逻辑
+
+    mods/玩法/20p/overrides/server/match/audit.js
+      基于上游添加：20p 审计逻辑
+
+    mods/玩法/20p/overrides/server/match/finalAssault.js
+      基于上游添加：首领限伤逻辑
+
+    mods/玩法/20p/overrides/server/match/gamedata.js
+      基于上游添加：20p 游戏数据 + bossHitLimit 传递【20p】
+
+    mods/玩法/20p/overrides/server/match/pool.js
+      基于上游添加：20p 悬赏池逻辑
+
+    mods/玩法/20p/overrides/server/match/unite.js
+      基于上游添加：联防逻辑
+
+    mods/玩法/20p/overrides/server/sim/spec.js
+      基于上游添加：20p 规格逻辑
+
+    mods/玩法/20p/overrides/server/sim/content/bands/meta.js
+      基于上游添加：鸭替换拦截（match:duckReplace）【clone】
+
+    mods/玩法/20p/overrides/server/sim/garrisons/battle.js
+      基于上游添加：clementia_global_kills 安装器【clementia】
+
+    mods/玩法/20p/overrides/shared/protocol.js
+      基于上游添加：
+        · C2S 'g.setAffinityBond' 消息注册【clone】
+        · setGameMode 白名单含 'dupBand'/'clone'【dupBand/clone】
+        · ROOM_CAPACITIES 导入【20p】
+      更新上游时注意：必须保留 C2S 注册和白名单扩展
+
+    mods/玩法/20p/overrides/shared/constants.js
+      基于上游添加：ROOM_CAPACITIES / DEFAULT_SEATS 导出【20p】
+
+    mods/玩法/20p/overrides/shared/diy.js
+      基于上游添加：clementia garrisonIds 设置（改版+精锐/非精锐区分）【clementia】
+                      + augmentDiyRecord bonds 扩展（_flags 位掩码）【clementia】
+      更新上游时注意：必须保留 garrisonIds + augmentDiyRecord 逻辑
+
+    mods/玩法/20p/overrides/shared/playerCapacity.js
+      基于上游添加：20p 玩家容量逻辑
+
+  ── A-type 客户端文件（mod 特有）──
+
+    mods/玩法/20p/public/js/ui/choiceOverlay.js
+      功能：分组悬赏 UI（GroupedChoiceView）
+      基于上游添加：分组选择界面（A组/B组按钮、进度、倒计时）
+                    + pickSp 统一判断 + turnPid 字段映射（2026-10-26 修复）
+      更新上游时注意：字段名必须用 turnPid（非 turn），必须使用 pickSp
+
+    mods/玩法/20p/public/js/ui/teamPanel.js
+      功能：分组队伍面板导航
+      基于上游添加：组切换导航（◀/▶ 左右箭头、分组 X/X 文本）
+                    + 导航移到头像上方 + pointer-events: auto（2026-10-26 优化）
+      更新上游时注意：必须保留 pointer-events: auto + 左右箭头 + 上方位置
+
+    mods/玩法/20p/public/js/ui/gameLogic/draft.js
+      功能：分组数据解析（normalizeSpGroups）
+      基于上游添加：poolGroups 数据解析和分组渲染
+
+    mods/玩法/20p/public/css/screens/game-panels.css
+      功能：分组样式
+      内容：.spov__groups 等分组 UI 样式（自有，无上游对应）
+
+    mods/玩法/20p/public/css/screens/game.css
+      功能：20p 游戏样式
+      基于上游添加：.team__nav 样式（背景/圆角/hover/pointer-events: auto）
+                    + 分组 X/X 文本加粗加深（2026-10-26 优化）
+
+    mods/玩法/20p/public/js/screens/lobby.js
+      功能：20p 大厅界面
+      基于上游添加：SweepReport 导入和渲染 + 禁用飞行/Boss限伤开关 UI
+
+    mods/玩法/20p/public/css/screens/lobby.css
+      功能：20p 大厅样式
+    mods/玩法/20p/public/css/screens/room.css
+      功能：20p 房间样式
+
+    mods/玩法/20p/public/js/ui/components.js
+    mods/玩法/20p/public/js/ui/gameComponents.js
+    mods/玩法/20p/public/js/ui/stats.js
+    mods/玩法/20p/public/js/net.js
+    mods/玩法/20p/public/js/battle/runner.js
+    mods/玩法/20p/public/mod-framework/modHook.js
+    mods/玩法/20p/public/sw.js
+      以上与上游一致，无特有改动
+
+  ── A-type 服务端/工具文件 ──
+
+    mods/玩法/20p/server.js
+      功能：20p 自定义服务入口（multi-mod aware）
+      机制：导入上游 startServer()，挂载所有 mod 模块
+      注意：此文件是 20p 独立启动入口，与 mod-framework/modServer.js 功能类似
+            实际启动使用 mod-framework/modServer.js，此文件为备用/历史入口
+
+    mods/玩法/20p/convert-skins.js
+      功能：v0.2.6 skins.json → v0.3.1 plugin.json 转换脚本
+      机制：一次性工具，将旧版皮肤数据转换为新版插件格式
+      注意：开发工具，非运行时依赖
+
+    mods/玩法/20p/package.json
+      功能：20p mod 包描述
+
+    mods/玩法/20p/manifest.json
+      功能：20p mod 清单（id/name/version/enabled/type）
+
+    mods/玩法/20p/功能描述.txt
+      功能：20p mod 功能描述文档
+
+  ── A-type 共享文件（非 override）──
+
+    mods/玩法/20p/shared/playerCapacity.js
+      功能：20p 玩家容量逻辑（与 overrides/ 下同名文件内容一致）
+    mods/玩法/20p/shared/constants.js
+      功能：20p 常量定义（与 overrides/ 下同名文件内容一致）
+
+
+================================================================================
+四、mods/扩展角色/clementia/（克莱门莎扩展）
+================================================================================
+
+  ── mod 入口：mods/扩展角色/clementia/index.js ──
+    功能：clementia mod 安装入口
+    注册的 hook：
+      · onLoadData — 注入克莱门莎特质数据（garrison + band）
+    启动时执行：
+      · generateClientGarrisonData() — 生成 garrisons.json 中的 clementia 数据
+      · triggerDataReload() — 重置+重新加载数据（解决 ESM 时序问题）
+
+  ── B-type override 文件（5 个）──
+
+    mods/扩展角色/clementia/overrides/shared/diy.js
+      基于上游添加：
+        · augmentDiyRecord() — 克莱门莎改版盟约扩展
+          · _flags 位掩码检测（bit 0=迅捷/突袭，bit 1=原版/改版）
+          · 改版追加 indomShip（不屈），突袭追加 raidShip
+        · garrisonIds 字段设置（精锐→kills_b/+2层，非精锐→kills_a/+1层）
+      更新上游时注意：必须保留 augmentDiyRecord 和 garrisonIds 逻辑
+
+    mods/扩展角色/clementia/overrides/server/sim/spec.js
+      基于上游添加：_flags 透传（改版/突袭标志在战斗单位中保留）
+      更新上游时注意：必须保留 _flags 透传
+
+    mods/扩展角色/clementia/overrides/js/render/app/info.js
+      基于上游添加：renderInfo 中 _flags 保留（改版信息在战斗面板显示）
+      更新上游时注意：必须保留 _flags 保留逻辑
+      ⚠ fingerprint.json 未收录此文件，需重新 gen-patches
+
+    mods/扩展角色/clementia/overrides/js/ui/gameLogic/bonds.js
+      基于上游添加：盟约 UI 扩展（克莱门莎额外盟约渲染）
+      更新上游时注意：必须保留盟约 UI 扩展
+      ⚠ fingerprint.json 未收录此文件，需重新 gen-patches
+
+    mods/扩展角色/clementia/overrides/js/ui/gameLogic/diy.js
+      基于上游添加：DIY 界面 _flags 透传
+      更新上游时注意：必须保留 _flags 透传逻辑
+      ⚠ fingerprint.json 未收录此文件，需重新 gen-patches
+
+  ── A-type 客户端文件（mod 特有）──
+
+    mods/扩展角色/clementia/public/js/ui/diyModel.js
+      功能：克莱门莎 DIY 模型
+      基于上游添加：
+        · _flags 透传逻辑（原版/改版 + 迅捷/突袭状态传递）
+        · DIY_OP_MODS 本地常量（不依赖共享 override 导出）
+
+    mods/扩展角色/clementia/public/js/screens/diy.js
+      功能：克莱门莎 DIY 界面
+      基于上游添加：
+        · 原版/改版切换 UI（_flags bit 1）
+        · 迅捷/突袭切换 UI（_flags bit 0）
+        · 克莱门莎专属 DIY 选项渲染
+
+
+================================================================================
+五、mods/模式/clone/（克隆模式）
+================================================================================
+
+  ── mod 入口：mods/模式/clone/index.js ──
+    功能：clone mod 安装入口
+    注册的 hook：
+      · lobby:beforeMatch — 注入 clone 规则（4 人共享阵容）
+      · match:init — 设置 clone 模式标志
+    纯钩子实现，无 override 文件，无 A-type 文件
+
+  ── 关联核心改动 ──
+    · shared/protocol.js — C2S g.setAffinityBond 注册
+    · server/match/player/views.js — affinityBondId 输出
+    · public/css/screens/game.css — .ca-pick 定位
+    · public/css/screens/draft.css — .dband__votes 左定位
+
+
+================================================================================
+六、mods/模式/dupBand/（重复策略模式）
+================================================================================
+
+  ── mod 入口：mods/模式/dupBand/index.js ──
+    功能：dupBand mod 安装入口
+    纯钩子实现，无 override 文件
+
+  ── A-type 客户端文件 ──
+
+    mods/模式/dupBand/public/js/screens/bandDraft.js
+      功能：dupBand 策略选择界面
+      基于上游添加：重复策略投票逻辑
+
+  ── 关联核心改动 ──
+    · server/lobby.js — setGameMode('dupBand') + startMatch rules
+    · shared/protocol.js — setGameMode 含 'dupBand'
+
+  ── 复用 20p override 中的 dupBand 代码 ──
+    · mods/玩法/20p/overrides/server/lobby.js — 3 处 dupBand dispatch
+    · mods/玩法/20p/overrides/shared/protocol.js — setGameMode 含 'dupBand'
+
+
+================================================================================
+七、核心层直接修改（Stronghold-Protocol/ 内，非 override）
+================================================================================
+
+  以下文件直接修改上游源文件，更新上游时必须手动合并：
+
+  ── [16] public/sw.js ──
+    修改：Service Worker fetch 3次重试 + cache: 'no-store' 降级
+    原因：scene.bin 请求偶发 ERR_FAILED，SW 无重试导致页面生命周期内不可用
+    合并策略：保留重试循环，合并上游 SW 新功能
+
+  ── [17] public/js/render/board3d/load.js ──
+    修改：fetchWithRetry(2次) + loadScenePack 3次重试（拆分 Core + 外层循环）
+    原因：SW 重试可能不够，页面层也需要独立重试
+    合并策略：保留 fetchWithRetry 和重试循环，合并上游场景加载新逻辑
+
+  ── [18] server/http/files.js ──
+    修改：.bin 从 COMPRESSIBLE 移除（不再压缩二进制顶点数据）
+    原因：brotli 压缩差异导致"只有主机出问题"
+    合并策略：保留 .bin 排除，合并上游新增的可压缩扩展名
+
+  ── [14] shared/constants.js ──
+    修改：新增 ROOM_CAPACITIES / DEFAULT_SEATS 导出
+    合并策略：保留新增导出，合并上游常量变化
+
+  ── [15] server/match/player/views.js ──
+    修改：privateView 新增 affinityBondId 输出
+    合并策略：保留 affinityBondId 输出，合并上游视图变化
+
+  ── ✅ public/css/screens/sweep.css ──
+    问题：16处 Git 冲突标记残留（<<<<<<< HEAD / >>>>>>> v0.3.2）
+    修复：已从 upstream-test 恢复原版 v0.3.2（2026-10-26）
+
+
+================================================================================
+八、fingerprint.json 状态
+================================================================================
+
+  ── 20p mod（mods/玩法/20p/patches/fingerprint.json）──
+    已收录：21 个 B-type override 文件
+    ⚠ 缺失：server/match/match/unitePhase.js（2026-10-26 新增）
+    操作：需重新运行 gen-patches.js 生成指纹
+
+  ── clementia mod（mods/扩展角色/clementia/patches/fingerprint.json）──
+    已收录：2 个（server/sim/spec.js, shared/diy.js）
+    ⚠ 缺失：3 个客户端 override
+      · js/render/app/info.js
+      · js/ui/gameLogic/bonds.js
+      · js/ui/gameLogic/diy.js
+    操作：需重新运行 gen-patches.js 生成指纹
+
+
+================================================================================
+九、上游更新时功能保留检查清单
+================================================================================
+
+  更新上游后，逐项确认以下功能未被遗漏：
+
+  ── mod-framework 层 ──
+  □ patcher.js 正常替换 override 文件（启动看 [patcher] 日志）
+  □ modHook.js 事件总线正常（上游 emit 调用未被破坏）
+  □ modServer.js 文件服务优先级正确（mod-framework > 20p > dupBand > clone > clementia）
+  □ check-mods.js 正常检测 mod 启用状态
+  □ config-ui.js 正常启动配置 UI
+  □ cloneAffinityPicker.js clone 模式下正常显示
+  □ mod-framework/public/ 文件基于新版 + 保留 mod 特有逻辑
+    □ game.js — CloneAffinityPicker 导入和渲染
+    □ bandDraft.js — clone 投票逻辑
+    □ room.js — 20p/clone 模式切换 + ConfigSelect
+    □ room.css — .rs-clock__ver 样式
+
+  ── 20p mod ──
+  □ shared/protocol.js — g.setAffinityBond C2S 注册 + setGameMode 白名单
+  □ shared/diy.js — clementia garrisonIds（精锐/非精锐区分）+ augmentDiyRecord
+  □ shared/constants.js — ROOM_CAPACITIES / DEFAULT_SEATS 导出
+  □ spDraft.js — poolGroups 分组 + 独立 _turnToken/_turnTimer + deadline 超时 + 30s 计时
+  □ unitePhase.js — 联防多轮推进（_uniteNextOrSettle）⚠ 新增
+  □ economy.js — _effectiveShopSlots 扩展
+  □ Match.js — _20pActive + match:init + 禁用飞行 + Boss 限伤
+  □ gamedata.js — bossHitLimit 传递
+  □ phases.js — 联防多轮次
+  □ finalAssault.js + damage.js — 首领限伤
+  □ lobby.js — freezeDiy 保留 _flags
+  □ battle.js — clementia_global_kills 安装器
+  □ meta.js — duckReplace hook
+  □ A-type 客户端文件：choiceOverlay.js（turnPid + pickSp）+ teamPanel.js（◀▶ + 上方位置）
+  □ A-type 客户端文件：draft.js + game-panels.css + game.css（.team__nav 样式）
+  □ A-type 客户端文件：lobby.js（SweepReport + 禁用飞行/Boss限伤开关 UI）
+
+  ── clementia mod ──
+  □ shared/diy.js — augmentDiyRecord + garrisonIds（精锐→+2，非精锐→+1）
+  □ spec.js — _flags 透传
+  □ info.js — renderInfo _flags 保留
+  □ bonds.js — 盟约 UI 扩展
+  □ diy.js（js/ui/gameLogic/）— DIY _flags 透传
+  □ A-type 客户端文件：diyModel.js + diy.js
+  □ 核心层：detailPanel.js desc||descRaw + app.js ++layerPopSeq + _flags 透传
+  □ 核心层：garrisons.json clementia 数据 + battle.js 安装器
+
+  ── clone mod ──
+  □ protocol.js — g.setAffinityBond C2S 注册
+  □ views.js — affinityBondId 输出
+  □ game.css — .ca-pick 定位
+  □ draft.css — .dband__votes 左定位
+
+  ── dupBand mod ──
+  □ lobby.js — dupBand dispatch
+  □ protocol.js — setGameMode 含 'dupBand'
+  □ A-type 客户端文件：bandDraft.js（重复策略投票逻辑）
+
+  ── 核心层直接修改 ──
+  □ sw.js — SW fetch 3次重试 + cache: 'no-store' 降级
+  □ load.js — fetchWithRetry + loadScenePack 3次重试
+  □ files.js — .bin 不在 COMPRESSIBLE
+  □ constants.js — ROOM_CAPACITIES / DEFAULT_SEATS 导出
+  □ views.js — affinityBondId 输出
+  □ sweep.css — 无 Git 冲突标记残留
+
+  ── fingerprint.json ──
+  □ 20p：unitePhase.js 已收录
+  □ clementia：info.js / bonds.js / diy.js 已收录
+  □ 运行 gen-patches.js 重新生成所有指纹

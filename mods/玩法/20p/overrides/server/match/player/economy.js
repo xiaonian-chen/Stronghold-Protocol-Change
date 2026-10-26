@@ -9,7 +9,7 @@ import { ruleOption } from '../../../shared/plugins/rules.js';
 import { freeSlot } from '../board.js';
 import { computeBonds } from '../bondsMeta.js';
 import { OK, fail } from './common.js';
-import modHook from '../../../../mod-framework/modHook.js';
+import { modHook } from '../../../../mod-framework/modHook.js';
 
 export class PlayerEconomy {
   addFunds(n, { reason = '' } = {}) {
@@ -35,6 +35,7 @@ export class PlayerEconomy {
   /** onSpend, dispatched once a payment's action is complete (buy / refresh / levelUp / reward / effect). */
   _afterSpend(amount, reason) {
     if (!(amount > 0)) return;
+    console.log(`[DIAG:_afterSpend] amount=${amount} reason=${reason} bandId=${this.bandId} total=${this.stats.gold}`);
     this.m.dispatch(this, 'onSpend', { amount, reason, total: this.stats.gold });
   }
 
@@ -69,12 +70,9 @@ export class PlayerEconomy {
 
   _rollChessSlot() {
     // the slotted 自选 pieces join the draw once the 调度中心 reaches their slot's level (player/diy.js diyRollEntries)
-    const id = this.pool.roll(this.m.rngShop, { maxTier: this.shop.level, extra: this.diyRollEntries() });
-    if (!id) return null;
-    const slot = { kind: 'chess', id, basePrice: this.gd.chessPrice(id), frozen: false, sold: false };
-    if (modHook.hasListeners('match:rollChessSlot')) {
-      modHook.emit('match:rollChessSlot', this, slot);
-    }
+    const id = this.m.pool.roll(this.m.rngShop, { maxTier: this.shop.level, extra: this.diyRollEntries() });
+    const slot = id ? { kind: 'chess', id, basePrice: this.gd.chessPrice(id), frozen: false, sold: false } : null;
+    if (slot) modHook.emit('match:rollChessSlot', this, slot);
     return slot;
   }
 
@@ -88,24 +86,10 @@ export class PlayerEconomy {
       bias = new Set();
       for (const [id, st] of Object.entries(bonds)) if (st && st.active) bias.add(id);
     }
-    if (modHook.hasListeners('match:rollItemSlot')) {
-      const ctx = { bias };
-      modHook.emit('match:rollItemSlot', this, ctx);
-      bias = ctx.bias;
-    }
-    const id = this.pool.rollItem(this.m.rngShop, this.shop.level, this.m.itemPool, bias);
+    const ctx = { bias };
+    modHook.emit('match:rollItemSlot', this, ctx);
+    const id = this.m.pool.rollItem(this.m.rngShop, this.shop.level, this.m.itemPool, ctx.bias);
     return id ? { kind: 'item', id, basePrice: this.gd.itemPrice(id), frozen: false, sold: false } : null;
-  }
-
-  _effectiveShopSlots() {
-    const slots = this.gd.shopSlots(this.shop.level);
-    if (modHook.hasListeners('match:shopSlots')) {
-      const override = modHook.emitUntil('match:shopSlots', this, this.shop.level, { ...slots });
-      if (override && typeof override === 'object') {
-        return { chess: Math.max(0, Number(override.chess) || 0), item: Math.max(0, Number(override.item) || 0) };
-      }
-    }
-    return slots;
   }
 
   /**
@@ -114,7 +98,14 @@ export class PlayerEconomy {
    */
   rollShop({ keepFrozen = false } = {}) {
     if (this._consumeTestShop()) return;
-    const { chess: nChess, item: nItem } = this._effectiveShopSlots();
+    let { chess: nChess, item: nItem } = this.gd.shopSlots(this.shop.level);
+    const hookResults = modHook.emit('match:shopSlots', this, this.shop.level, { chess: nChess, item: nItem });
+    for (const r of hookResults) {
+      if (r && typeof r === 'object') {
+        if (Number.isInteger(r.chess) && r.chess >= 0) nChess = r.chess;
+        if (Number.isInteger(r.item) && r.item >= 0) nItem = r.item;
+      }
+    }
     const old = this.shop.slots;
     const layout = this.shop.layout || { chess: old.length, item: 0 };
     const oldChess = old.slice(0, layout.chess);
@@ -140,7 +131,7 @@ export class PlayerEconomy {
     const queued = this._testShopNext;
     if (this.m.test !== true || !queued) return false;
     this._testShopNext = null;
-    const { chess: nChess, item: nItem } = this._effectiveShopSlots();
+    const { chess: nChess, item: nItem } = this.gd.shopSlots(this.shop.level);
     const ok = Array.isArray(queued) && queued.length === nChess + nItem && queued.every((s, i) => {
       const kind = i < nChess ? 'chess' : 'item';
       return !!s && s.kind === kind && (kind === 'chess' ? !!this.gd.chess(s.id) : !!this.gd.item(s.id));

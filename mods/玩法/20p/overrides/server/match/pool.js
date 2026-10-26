@@ -21,21 +21,6 @@
 // the promotion reward and random grants pass diyStockEntries (the roll's own tier, DESIGN §30.23). Weighted by its
 // copies like any chess, drawn by that player only.
 
-import { poolGroupSizes, poolCopyScale } from '../../shared/playerCapacity.js';
-
-/** Groups are assigned by occupied seat order at match start and never reshuffled after eliminations. */
-export function createPoolGroups(gd, players, opts = {}) {
-  const sorted = players.slice().sort((a, b) => a.seat - b.seat);
-  let offset = 0;
-  const overrideScale = Number.isFinite(opts.scale) && opts.scale > 0 ? opts.scale : null;
-  return poolGroupSizes(sorted.length).map((size, i) => {
-    const playerIds = sorted.slice(offset, offset + size).map((p) => p.playerId);
-    offset += size;
-    const scale = overrideScale != null ? overrideScale : poolCopyScale(size);
-    return { id: i + 1, playerIds, scale, pool: new SharedPool(gd, { ...opts, scale }) };
-  });
-}
-
 /**
  * Per-match disabled bond set D and banned chess (research 01 A2): D = uniform sample of `core` core bonds and `addon`
  * add-on bonds among weight > 0 bonds that are active in the mode. A visible chess is banned iff every one of its
@@ -70,10 +55,24 @@ function sample(arr, n, rng) {
   return a.slice(0, Math.max(0, Math.min(n, a.length)));
 }
 
+import { poolGroupSizes, poolCopyScale } from '../../shared/playerCapacity.js';
+
+export function createPoolGroups(gd, players, opts = {}) {
+  const sorted = players.slice().sort((a, b) => a.seat - b.seat);
+  let offset = 0;
+  const overrideScale = Number.isFinite(opts.scale) && opts.scale > 0 ? opts.scale : null;
+  return poolGroupSizes(sorted.length).map((size, i) => {
+    const playerIds = sorted.slice(offset, offset + size).map((p) => p.playerId);
+    offset += size;
+    const scale = overrideScale != null ? overrideScale : poolCopyScale(size);
+    return { id: i + 1, playerIds, scale, pool: new SharedPool(gd, { ...opts, scale }) };
+  });
+}
+
 export class SharedPool {
   /**
    * @param {import('./gamedata.js').GameData} gd
-   * @param {{ banned?: Iterable<string>, scale?: number }} [opts]
+   * @param {{ banned?: Iterable<string> }} [opts]
    */
   constructor(gd, { banned = [], scale = 1 } = {}) {
     this.gd = gd;

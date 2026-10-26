@@ -80,6 +80,10 @@ export class MatchViews {
       modeId: this.modeId,
       difficulty: this.difficulty,
       stageId: this.stageId,
+      // a non-default official version's match (DESIGN §35.23): its registry id, so a page that never saw the room (a
+      // reload after it closed: the lobby's result replay) reads the frames with that version's data; absent for the
+      // default, whose frames stay byte-identical
+      ...(this.version ? { version: this.version } : {}),
       setupRevision: this.setupRevision,
       rerollVote: this.setupVote ? {
         id: this.setupVote.id,
@@ -106,6 +110,7 @@ export class MatchViews {
         seat: ps.seat,
         name: ps.name,
         isBot: ps.isBot,
+        ...(Number.isInteger(ps.aiTakeoverRound) ? { aiTakeoverRound: ps.aiTakeoverRound } : {}),
         connected: ps.isBot || (ps.connected && !ps.left),
         alive: ps.alive,
         lp: Math.max(0, ps.lp),
@@ -146,12 +151,6 @@ export class MatchViews {
       const d = this.draft;
       // turnSeconds: the length of a turn (the countdown gauge's total; 0 when untimed) — deadline = turnDeadline
       v.draft = {
-        id: d.id,
-        groups: d.groups.map((g) => ({
-          id: g.id, playerIds: g.playerIds.slice(), order: g.order.slice(),
-          turn: g.done ? null : g.order[g.idx] ?? null, picks: { ...g.picks }, skipsLeft: { ...g.skipsLeft },
-          turnDeadline: g.turnDeadline || 0, turnSeconds: g.turnSeconds || 0, untimed: !!g.untimed, done: !!g.done,
-        })),
         order: d.order.slice(), turn: this.draftTurn(), picks: { ...d.picks }, skipsLeft: { ...d.skipsLeft }, turnDeadline: d.turnDeadline || 0,
         turnSeconds: d.untimed ? 0 : this.bandTurnMs() / 1000, untimed: !!d.untimed,
       };
@@ -159,21 +158,25 @@ export class MatchViews {
     if (this.phase === PHASE.SP_DRAFT && this.sp) {
       const s = this.sp;
       v.sp = {
-        id: s.id,
-        groups: s.groups.map((g) => ({
-          id: g.id, playerIds: g.playerIds.slice(), order: g.order.slice(),
-          family: g.family, name: g.name, desc: g.desc, eventId: g.eventId,
-          cards: g.cards.map(cardView), turn: g.done ? null : g.order[g.idx] ?? null,
-          picks: { ...g.picks }, taken: { ...g.taken }, turnDeadline: g.turnDeadline || 0,
-          turnSeconds: g.turnSeconds || 0, untimed: !!g.untimed, done: !!g.done,
-        })),
-        family: s.family, name: s.name, desc: s.desc, eventId: s.eventId, cards: s.cards.map(cardView), order: s.order.slice(),
+        family: s.family, name: s.name, desc: s.desc, eventId: s.eventId,
+        cards: s.cards.map(c => ({ ...cardView(c), soldOut: c.kind === 'item' && !this.itemPool.canGain(c.id) })), order: s.order.slice(),
         turn: this.spTurn(), picks: { ...s.picks }, taken: { ...s.taken }, untimed: !!s.untimed,
-        turnDeadline: s.turnDeadline || 0, turnSeconds: s.turnSeconds || 0,
-        displayOrder: Array.isArray(s.displayOrder) ? s.displayOrder : null,
       };
+      if (Array.isArray(s.groups) && s.groups.length > 1) {
+        v.sp.groups = s.groups.map(g => ({
+          id: g.id,
+          family: g.family, name: g.name, desc: g.desc,
+          cards: g.cards.map(c => ({ ...cardView(c), soldOut: c.kind === 'item' && !this.itemPool.canGain(c.id) })),
+          order: g.order.slice(), picks: { ...g.picks }, taken: { ...g.taken },
+          turn: g.order[g.idx] || null, done: !!g.done, untimed: !!g.untimed,
+          turnDeadline: g.turnDeadline || 0,
+        }));
+        const now = this.sched.now();
+        const earliest = s.groups.filter(g => !g.done && g.turnDeadline > now).reduce((min, g) => Math.min(min, g.turnDeadline), Infinity);
+        if (earliest < Infinity) v.deadline = earliest;
+      }
     }
-    if (this.phase === PHASE.UNITE && this.unitePlan) v.unite = { helpers: this.unitePlan.helpers.map((p) => p.playerId), leakers: this.unitePlan.leakers.map((p) => p.playerId), round: this.unitePlan.round, roundsMax: this.unitePlan.roundsMax };
+    if (this.phase === PHASE.UNITE && this.unitePlan) v.unite = { helpers: this.unitePlan.helpers.map((p) => p.playerId), leakers: this.unitePlan.leakers.map((p) => p.playerId), round: this.unitePlan.round || 1, roundsMax: this.unitePlan.roundsMax || 1 };
     // SETTLE after a 联防: its outcome as data (settle.js uniteResultView; GitHub #235, PR #112) — { through, helpers,
     // leakers, losses: { playerId: the LP settlement charged this round } } — the client's result box reads the viewer's
     // own charge from it; absent when no 联防 resolved (the client then shows the round's own battle result)
@@ -286,7 +289,10 @@ export class MatchViews {
   /** A 自选 piece's pick (like the sim's UnitInfo.diy): a scout's card composes the operator from it (shared/diy.js). */
   _diyInfo(ps, piece) {
     const p = piece.kind === 'chess' && typeof ps.diyPickOf === 'function' ? ps.diyPickOf(piece.id) : null;
-    return p ? { charId: p.charId, skillIndex: p.skillIndex, uniEquipId: p.uniEquipId } : undefined;
+    if (!p) return undefined;
+    const out = { charId: p.charId, skillIndex: p.skillIndex, uniEquipId: p.uniEquipId };
+    if (Number.isInteger(p._flags)) out._flags = p._flags;
+    return out;
   }
 
   /** The 外勤医疗 reserve medic already standing on each player's field in preparation. Touch replaces it only at

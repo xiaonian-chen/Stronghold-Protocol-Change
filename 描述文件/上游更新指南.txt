@@ -1,32 +1,112 @@
 ===========================================================
-  上游更新指南 — Git 版（三层完整流程）
-  最后更新：2026-10-25
+  上游更新指南 — Git 版（五层完整流程）
+  最后更新：2026-10-27
 ===========================================================
 
-项目结构分三层，在上游更新时必须全部适配：
+描述文件协作关系（四文件分工）：
 
-  Stronghold-Protocol-v0.3.1/               -- 你的项目根目录
+  本文件（上游更新指南.txt）
+    → 五层递进操作流程，每层标注参考哪些文件的哪些章节
+
+  核心层改动记录.txt
+    → 按五层归类 Stronghold-Protocol/ 内相对上游的改动
+    → 第一层：冲突文件+保留策略  第二层：需检查文件  第三~五层：验证清单
+    → 上游更新时按层对照，确认改动是否保留/需合并
+
+  非上游文件功能记录.txt
+    → 所有非上游文件基于上游添加了什么内容和功能
+    → 按 mod-framework/20p/clementia/clone/dupBand 分节
+    → 每个文件标注"更新上游时注意"必须保留的逻辑
+    → 第七节：功能保留检查总清单
+
+  功能适配经验.txt
+    → 按 mod 归类问题排查与解决方案
+    → 【一】mod-framework 【二】20p 【三】clementia 【四】clone
+    → 【六】通用经验速查  【七】测试问题汇总
+    → 遇到同类问题时速查经验
+
+项目结构分五层，在上游更新时必须逐层递进：
+
+  Stronghold-Protocol-v0.3.1/               -- 项目根目录
   ├── Stronghold-Protocol/                  -- 【Git 仓库】第一层：上游核心
   │   ├── .git/                             -- Git 历史 & 配置
-  │   ├── server/  public/  shared/ ...     -- 游戏源码（Git 管理）
-  │   └── ...
-  ├── mod-framework/                        -- 【安全区】第二层：mod 框架
+  │   ├── scripts/                          -- 启动/安装脚本（含 20p-loader.mjs）
+  │   ├── server/                           -- 服务端源码
+  │   │   ├── match/                        -- 比赛逻辑（Match.js、phases、pool 等）
+  │   │   ├── sim/                          -- 模拟引擎（bands、garrisons、items 等）
+  │   │   ├── ai/                           -- AI 策略
+  │   │   ├── health/                       -- 健康检查
+  │   │   ├── http/                         -- HTTP/WebSocket 服务
+  │   │   ├── lobby.js                      -- 房间创建（被 20p override）
+  │   │   ├── data.js / net.js / ...        -- 数据/网络/其他
+  │   ├── public/                           -- 客户端源码
+  │   │   ├── js/                           -- JS 模块
+  │   │   │   ├── screens/                  -- 页面（game/room/lobby/bandDraft 等）
+  │   │   │   ├── ui/                       -- UI 组件（detailPanel/shopBar/hud 等）
+  │   │   │   ├── render/                   -- 渲染引擎（app/info/pick 等）
+  │   │   │   ├── battle/                   -- 战斗模拟
+  │   │   ├── css/                          -- 样式（screens/ 下各页面 CSS）
+  │   │   ├── fonts/ / icons/ / i18n/       -- 字体/图标/国际化
+  │   │   ├── dev/                          -- 开发工具（perf/simcheck 等）
+  │   │   ├── index.html                    -- 入口页
+  │   ├── shared/                           -- 共享模块
+  │   │   ├── constants.js                  -- 常量（被 20p override）
+  │   │   ├── protocol.js                   -- C2S/S2C 协议（被 20p override）
+  │   │   ├── diy.js                        -- DIY 逻辑（被 20p/clementia override）
+  │   │   ├── plugins/                      -- 插件 SDK
+  │   │   ├── studio/                       -- 场景编辑
+  │   │   ├── ...                           -- bandBonds/i18n/media 等
+  │   ├── data/                             -- 游戏数据（bands/garrisons/chess 等）
+  │   ├── schemas/                          -- JSON Schema
+  │   ├── docs/                             -- 上游文档
+  │   ├── plugins/                          -- 上游插件（plugin-chat/skins 等）
+  │   ├── packs/                            -- 内容包
+  │   └── package.json / ...                -- 上游 npm 配置
+  ├── mod-framework/                        -- 【安全区】第四层：mod 框架
   │   ├── modHook.js                        -- 事件总线（钩子系统）
   │   ├── modManager.js                     -- mod 加载器
   │   ├── modServer.js                      -- mod 服务器入口
+  │   ├── check-mods.js                     -- mod 检查入口
+  │   ├── config-ui.js                      -- 配置 UI 生成
+  │   ├── config.json                       -- 框架配置
   │   ├── lib/patcher.js                    -- 运行时文件替换
-  │   ├── scripts/gen-patches.js            -- 生成 override 指纹
-  │   ├── scripts/check-patches.js          -- 检查 override 兼容性
-  │   ├── scripts/test-mod.mjs              -- mod-framework 冒烟测试
-  │   └── ...
-  ├── mods/                                 -- 【安全区】第三层：各 mod
-  │   ├── 玩法/20p/         — 24 个 overrides，2 个核心层 hook 文件
-  │   ├── 模式/clone/       — 纯钩子型，不修改任何上游文件
-  │   ├── 模式/dupBand/     — 1 个核心文件 + 20p 的 2 个 overrides
-  │   └── 扩展角色/clementia/ — 4 个 overrides，3 个核心文件直接修改
-  ├── node/                                  -- 【安全区】项目自带 Node.js 运行时
-  ├── 描述文件/                              -- 【安全区】本文档所在
-  ├── package.json                          -- 【安全区】
+  │   ├── public/                           -- 框架前端覆盖
+  │   │   ├── js/screens/                   -- game.js / bandDraft.js / room.js（B-type）
+  │   │   ├── js/ui/cloneAffinityPicker.js -- 克隆倾向选择器（A-type）
+  │   │   └── css/screens/room.css          -- 房间样式覆盖（B-type）
+  │   └── scripts/                          -- 工具脚本
+  │       ├── gen-patches.js                -- 生成 override 指纹
+  │       ├── check-patches.js              -- 检查 override 兼容性
+  │       └── test-mod.mjs                  -- 冒烟测试
+  ├── mods/                                 -- 【安全区】第五层：各 mod
+  │   ├── 玩法/20p/                         -- 20 人玩法扩展
+  │   │   ├── overrides/ (27)              -- B-type 覆盖上游文件
+  │   │   ├── public/ (15)                 -- A-type 前端新增/覆盖
+  │   │   ├── shared/ (4)                  -- A-type/B-type 共享模块
+  │   │   ├── index.js / server.js         -- mod 入口 & 服务端扩展
+  │   │   └── manifest.json / package.json -- mod 元数据
+  │   ├── 扩展角色/clementia/               -- Clementia 改版角色
+  │   │   ├── overrides/ (5)              -- B-type 覆盖上游文件
+  │   │   ├── public/ (2)                 -- A-type 前端新增
+  │   │   ├── index.js                    -- mod 入口
+  │   │   └── manifest.json               -- mod 元数据
+  │   ├── 模式/clone/                      -- 克隆模式
+  │   │   ├── index.js                    -- 纯钩子型，不修改任何上游文件
+  │   │   └── manifest.json               -- mod 元数据
+  │   └── 模式/dupBand/                    -- 重复策略模式
+  │       ├── public/ (1)                 -- A-type 前端覆盖
+  │       ├── index.js                    -- mod 入口
+  │       └── manifest.json / package.json -- mod 元数据
+  ├── node/                                 -- 【安全区】项目自带 Node.js 运行时
+  │   └── node.exe
+  ├── 描述文件/                              -- 【安全区】项目文档
+  │   ├── 上游更新指南.txt                   -- 本文件
+  │   ├── 核心层改动记录.txt                  -- Stronghold-Protocol/ 内相对上游的改动
+  │   ├── 非上游文件功能记录.txt              -- 非上游文件功能说明
+  │   └── 功能适配经验.txt                    -- 按 mod 归类的问题排查经验
+  ├── .gitignore                            -- 【安全区】
+  ├── .gitmodules                           -- 【安全区】
+  ├── README.md                             -- 【安全区】
   └── 启动服务器（信任插件）.bat              -- 【安全区】
 
 
@@ -47,21 +127,28 @@
   远程源：
     upstream → https://github.com/sganggs/Stronghold-Protocol.git
 
-  Git 自动处理第一层（核心合并），第二层和第三层仍需人工检查。
+  Git 自动处理第一层（核心合并），其余四层仍需人工检查。
 
 
 ===========================================================
-  完整更新流程（三层递进）
+  完整更新流程（五层递进）
 ===========================================================
 
 ★ 重要：上游使用 GitHub Releases 发布稳定版，只合并打了 tag 的版本！
    先浏览器打开 https://github.com/sganggs/Stronghold-Protocol/releases
    看到新版本号（如 v0.3.2）再开始以下流程。
 
+★ 逻辑：先合代码 → 再统一版本 → 再验功能 → 再验框架 → 再验 mod
+  每一层都依赖前一层完成，不能跳过。
+
 
 ───────────────────────────────────────────────
   第一层：核心合并（Git 自动）
 ───────────────────────────────────────────────
+
+  ★ 参考文件：
+    · 核心层改动记录.txt → 第一层：列出所有可能冲突的 22 个文件及保留策略
+    · 非上游文件功能记录.txt → 第七节：上游更新时功能保留检查清单
 
   ── 1.0 发现新版本 ──
 
@@ -81,25 +168,269 @@
 
   ── 1.3 解决冲突（如有）──
 
-    只有我们修改过的 11 个文件可能出现冲突：
+    只有我们修改过的 12 个文件可能出现冲突：
       server/lobby.js              scripts/launch.mjs
       server/match/Match.js        server/match/match/phases.js
       server/match/player/economy.js   server/match/finalAssault.js
       server/sim/content/bands/meta.js
       public/js/ui/detailPanel.js  public/js/render/app.js
       data/garrisons.json          shared/constants.js
+      public/css/screens/sweep.css  public/js/ui/hud.js
 
     解决策略见下方「冲突处理指南」。
     解决完后：git add . ; git commit -m "merge upstream v0.3.2"
 
+  ── 1.4 版本差异采集（★★★ 产出第二层的排查清单！）──
+
+    合并提交完成后，用 git 精确获取"本次上游版本相对旧版改了哪些文件"，
+    生成第二层只针对这些文件排查的清单。此步骤能让第二层从"全量扫"
+    变为"按 git 清单精准扫"，既省时又零遗漏。
+
+    第一步：记录旧版本 tag（首轮已是 v0.3.1-base）：
+      git tag                                        # 查看已有 tag
+      若本轮更新前没有给当前 HEAD 打 tag，先打上：
+        git tag v0.3.1-base 或对应旧版本号 <旧tag>
+
+    第二步：提取"改动的文件"清单：
+      git diff <旧tag>..<新tag> --name-only
+      例如：git diff v0.3.1-base..v0.3.2 --name-only
+
+    第三步：提取"新增/删除的文件"清单：
+      git log <旧tag>..<新tag> --name-status --diff-filter=ADR
+      # A=新增 R=重命名 D=删除，--name-status 输出每行以 状态+文件名 开头
+
+    第四步：合并清单，去重后保存为「本次版本漂移排查清单」，
+      供第二层使用。删除的文件（D）通常无需排查（本地已被移除），
+      但要确认 20p 是否曾对该文件做过 override——若有，需确认 override
+      同步移除，避免残留失效文件。
+
+    注意：
+      · 清单只包含"上游本次改动的文件"，即唯一可能发生版本漂移的对象
+      · 未在清单中的文件 = 上游没改，行数/哈希天然一致，无需浪费精力
+      · 20p 自身新增、与上游无同名交集的 A-type 文件不在漂移范围，
+        仍交给第三层功能验证（详见下方边界说明）
+
 
 ───────────────────────────────────────────────
-  第二层：mod-framework 框架兼容性检查
+  第二层：版本漂移排查（★★★ 核心合并后立即执行！）
 ───────────────────────────────────────────────
 
-  核心合并完后，需要确认 mod 框架的各组件仍然正常工作。
+  ★ 参考文件：
+    · 核心层改动记录.txt → 第二层：需检查的非上游文件清单（mod-framework/public/ + 各 mod A-type）
+    · 非上游文件功能记录.txt → 各 mod 节：每个 A-type/B-type 文件基于上游添加了什么逻辑，
+                             "更新上游时注意"标注必须保留的内容
+    · 功能适配经验.txt → 1.3/1.4：版本漂移排查经验（B-type 不报错但 UI 异常、
+                                             A-type 误覆盖导致功能丢失）
 
-  ── 2.1 检查 patcher.js 运行时替换 ──
+  问题本质：
+    mod-framework/public/ 和 mods/*/public/ 下的文件会覆盖上游同名文件。
+    如果这些文件基于旧版上游，新版 UI 结构/样式/逻辑会异常，
+    且不报 SyntaxError——旧版有完整导出，只是渲染结果与新版不匹配。
+    这是比导出缺失更隐蔽的兼容性问题。
+
+  目的：
+    核心合并完后，立即确保所有非原版文件都基于新版上游，
+    消除版本漂移，为后续各层的功能验证提供正确的基础。
+    这是整个流程中最关键的一步——跳过会导致后续所有验证都在错误基准上进行。
+
+  排查范围：
+    ★ 本层已精简为"只针对 1.4 版本差异采集生成的清单"排查，
+       不再全量扫所有非上游文件。
+
+    清单中的文件 = 上游本次改动 + 需确认的 20p override 映射：
+      先从「本次版本漂移排查清单」取出每个改动文件（去掉 server/ 核心层、
+      纯新增的 A-type），单列出其中"与上游有同名对应文件"的那些（即 mod-
+      framework/public/、mods/*/public/、mods/*/overrides/ 下的覆盖文件），
+      用下方的五步递进逐一排查。
+
+    边界（明确哪些不归本层管）：
+      · 纯新增的 A-type 文件（上游没有同名文件，纯 mod 增加）
+        → 不在漂移范围，本层跳过 → 交给第三层功能验证
+      · server/ 核心层改动文件
+        → 合并阶段已由 git 处理冲突，本层只关注 public/ 与 overrides/ 的
+          UI/逻辑覆盖文件
+      · 未出现在清单中的覆盖文件
+        → 上游没改，行数/哈希天然一致，无需排查
+
+  排查优先级（仍遵循）：
+    mod-framework/public/ > mods/*/public/ > mods/*/overrides/
+    （mod-framework 优先级最高，影响面最大）
+    清单内全部文件都要过，但优先级高者先查、给更多关注。
+
+  排查方法（五步递进）：
+
+    ── 第一步：行数对比 ──
+
+      对每个 mod 文件，计算与上游同名文件的行数差异：
+        差异 ≤ 5 行  → 低风险（可能只是微调）
+        差异 6-50 行 → 中风险（需进一步检查）
+        差异 > 50 行 → 高风险（很可能基于旧版或有大量 mod 扩展）
+
+      PowerShell 脚本示例：
+        $mod = "mod-framework\public\js\screens\bandDraft.js"
+        $up  = "Stronghold-Protocol\public\js\screens\bandDraft.js"
+        $modLines = (Get-Content $mod).Count
+        $upLines  = (Get-Content $up).Count
+        Write-Host "$mod : mod=$modLines upstream=$upLines diff=$(modLines - $upLines)"
+
+    ── 第二步：关键特征 grep ──
+
+      从上游新版新增的 CSS class、组件名、函数名、常量名中，
+      选取代表性关键词，在 mod 文件中搜索。
+      如果上游有但 mod 文件没有 → 确认基于旧版。
+
+      常用关键词（v0.3.2 新增）：
+        CSS class:  dorder__card, dorder__art, dorder__face, rs-clock__ver,
+                    protocol-boot, draft-detail__off
+        组件/函数:  VersionTag, AiTakeoverPanel, heldDraftPub,
+                    DRAFT_HOLD_MS, BOOT_MIN_MS, useRise
+
+      PowerShell 脚本示例：
+        $features = @('VersionTag', 'DRAFT_HOLD_MS', 'dorder__card')
+        foreach ($f in $features) {
+          $inUp  = (Get-Content $up -Raw) -match [regex]::Escape($f)
+          $inMod = (Get-Content $mod -Raw) -match [regex]::Escape($f)
+          Write-Host "$f : upstream=$inUp mod=$inMod"
+        }
+
+    ── 第三步：哈希校验 ──
+
+      对行数完全一致的文件，计算 SHA-256 哈希：
+        哈希一致 → 文件与上游完全相同，无风险
+        哈希不一致 → 内容有差异，需人工对比
+
+      PowerShell 脚本示例：
+        $h1 = (Get-FileHash $mod -Algorithm SHA256).Hash
+        $h2 = (Get-FileHash $up  -Algorithm SHA256).Hash
+        Write-Host "identical: $($h1 -eq $h2)"
+
+    ── 第四步：重写函数完整性检查（★★★ 前三步通过仍可能有此问题！）──
+
+      前三步只能检测"mod 文件是否缺少上游新增内容"，无法检测
+      "mod 重写的函数是否丢失了上游原有功能"。
+      override 文件重写上游函数时，如果只保留了自己用到的模式，
+      丢失了其他调用方依赖的模式，会导致静默失效（不报错，但功能缺失）。
+
+      检查方法：
+        对每个 override 文件，提取其中重写/覆盖的上游函数名，
+        与上游同名文件中对应函数逐一对比：
+          a) 函数签名（参数列表）是否一致
+          b) 功能分支是否完整（if/else/switch 所有分支）
+          c) 返回值类型/结构是否一致
+
+      重点检查的函数类型：
+        - 被多个系统调用的公共 API（rollPool、rollItemId、grantChess 等）
+        - 事件 handler / dispatch 函数
+        - 数据访问函数（gameData、chess、band 等）
+
+      历史案例：
+        20p spDraft.js 的 rollPool()：原版支持 weighted/items/默认池抽取
+        三种模式，20p override 只保留了 items 模式，导致歌蕾蒂娅特质、
+        焰尾特质、潘格尼尼策略全部失效（它们使用默认池抽取模式）
+        详见功能适配经验.txt → 0.11
+
+    ── 第五步：分组/分池逻辑共享属性一致性检查 ──
+
+      分组/分池逻辑中，如果每组独立调用"包含随机决策的完整生成函数"，
+      会导致各组结果不一致（如 family 不同）。
+
+      检查方法：
+        对每个 override 文件中的分组/分池循环（poolGroups.map / forEach），
+        检查循环体内是否调用了包含随机决策的完整生成函数（如 generateDraft）：
+          a) 如果是，提取随机决策到循环外，先统一决定共享属性
+          b) 循环内只做"基于已决定的共享属性生成具体内容"
+
+      历史案例：
+        20p spDraft.js 的 enterSpDraft()：对每个 poolGroup 独立调用
+        generateDraft()，而 generateDraft 内部每次独立 weightedPick 决定
+        family，导致 A 组全道具/B 组全悬赏/C 组全战术
+        修复：先统一 weightedPick 决定 family，再为各组用 buildCards()
+        生成同 family 卡牌
+        详见功能适配经验.txt → 0.12
+
+  本层工作流总结（精简版）：
+    1. 第 1.4 步已生成「本次版本漂移排查清单」
+    2. 从清单中筛出"与上游有同名覆盖"的文件（排除纯新增 A-type 与
+       server/ 核心层，它们归别的层）
+    3. 对筛出的文件，按需套用五步递进：
+       第四/五步是重点（重写完整性 + 分组一致性），
+       第一/二/三步在当前"清单导向"下可直接聚焦差异文件用，
+       不再需要全量哈希核对。
+    4. 修复遵循下方「修复策略」
+
+  修复策略（按 mod 改动量选择）：
+
+    a) mod 无特有改动
+       → 直接用上游替换
+       例：mod-framework/game.js（纯旧版覆盖，无 mod 逻辑）
+
+    b) mod 仅有 1-2 处改动
+       → 用上游替换 + 手动加回改动
+       例：dupBand/bandDraft.js（上游 + const taken = new Map()）
+
+    c) mod 有大量特有改动
+       → 以上游为基准，逐个合并新增功能
+       例：mod-framework/room.js（保留 20p/clone 模式切换，
+           合并 VersionTag 等新功能）
+
+    d) mod-framework/public/ 文件同时有 mod 特有功能
+       → 用上游替换 + 重新添加 mod 特有逻辑
+       例：mod-framework/bandDraft.js（上游 + clone draft 投票逻辑）
+
+  历史案例（v0.3.1→v0.3.2）：
+    - bandDraft.js：旧版缺少 dorder__card 分离式布局 → 策略界面显示异常
+    - game.js：旧版缺少 DRAFT_HOLD_MS/BOOT_MIN_MS → 协议启动动画时序异常
+    - room.js：缺少 VersionTag → 房间版本标签不显示
+    - room.css：缺少 .rs-clock__ver 等新样式 → 版本标签样式缺失
+    详见「功能适配经验.txt → 1.7 和 1.8」
+
+
+───────────────────────────────────────────────
+  第三层：插件功能检查
+───────────────────────────────────────────────
+
+  ★ 参考文件：
+    · 核心层改动记录.txt → 第三层：插件功能验证清单
+    · 功能适配经验.txt → 【六】通用经验速查：全链路思维、静默失败等
+
+  版本漂移修复完后，先验证上游原版功能是否正常（不带 mod 逻辑）。
+  确认基础功能没问题，再进入后续框架和 mod 检查。
+
+  ── 3.1 启动服务器，确认无报错 ──
+
+    启动后看控制台，应无 SyntaxError / ReferenceError。
+
+  ── 3.2 验证核心界面功能 ──
+
+    □ 标题界面正常显示
+    □ 创建同盟 / 独立模拟正常
+    □ 策略选择界面（bandDraft）UI 正常
+    □ 悬赏选择界面正常
+    □ 战斗流程正常（开始→战斗→结算）
+    □ 房间版本标签（VersionTag）正常显示
+    □ 协议启动动画时序正常（DRAFT_HOLD_MS / BOOT_MIN_MS）
+
+    ★ 以上均为 L2（运行时测试），必须由用户实际操作 UI 确认
+      L1（链路追踪）：逐节点确认字段名/类型/映射关系，修复所有链路断点
+      L2（运行时测试）：实际操作 UI 确认功能表现
+      正确流程：AI 做 L1 → 修复断点 → 用户做 L2 确认
+      详见功能适配经验.txt → 【六】#28-#32 验证方法论
+
+
+───────────────────────────────────────────────
+  第四层：mod-framework 框架兼容性检查
+───────────────────────────────────────────────
+
+  ★ 参考文件：
+    · 核心层改动记录.txt → 第四层：mod-framework 组件清单及检查内容
+    · 非上游文件功能记录.txt → 第二节：框架各组件功能说明（patcher/modHook/gen-patches/
+                             check-patches/modManager/modServer）
+    · 功能适配经验.txt → 【一】mod-framework：1.1 禁用崩溃、1.2 override 冲突、
+                             1.3 版本漂移、1.5 组件未生效
+
+  插件功能确认后，检查 mod 框架各组件是否正常工作。
+
+  ── 4.1 检查 patcher.js 运行时替换 ──
 
     mod-framework/lib/patcher.js 负责把 overrides/ 文件替换到运行时内存。
     原理：启动时读取 overrides/ 下的文件，用其完整内容替换上游文件。
@@ -108,7 +439,7 @@
     极端情况：如果上游删除了某个被 overrides 覆盖的文件，patcher 会在
     控制台打印 [patcher] MISSING 警告，此时需要评估该 override 是否废弃。
 
-  ── 2.2 检查 modHook.js 钩子系统 ──
+  ── 4.2 检查 modHook.js 钩子系统 ──
 
     mod-framework/modHook.js 是事件总线，提供：
       modHook.on('hook:name', callback)   → 注册钩子
@@ -120,12 +451,12 @@
     如果上游改了调用时机（比如 match:start 不再在某个位置触发），需人工
     查看 git diff 确认 emit 所在上下文是否被破坏。
 
-  ── 2.3 检查 gen-patches / check-patches 工具 ──
+  ── 4.3 检查 gen-patches / check-patches 工具 ──
 
     这两个脚本依赖上游文件结构。如果上游改了目录组织，可能需要微调。
     正常情况下不会出问题——先跑一下看看有无报错即可。
 
-  ── 2.4 确认 modManager.js 加载正常 ──
+  ── 4.4 确认 modManager.js 加载正常 ──
 
     启动后看控制台，应能看到：
       [mod-framework] loading mods...
@@ -136,8 +467,15 @@
 
 
 ───────────────────────────────────────────────
-  第三层：逐个 Mod 适配验证
+  第五层：逐个 Mod 适配验证
 ───────────────────────────────────────────────
+
+  ★ 参考文件：
+    · 核心层改动记录.txt → 第五层：每个 mod 的核心层修改 + override 文件清单 + 验证清单
+    · 非上游文件功能记录.txt → 各 mod 节（三~六）：override 文件基于上游添加了什么逻辑，
+                             "更新上游时注意"标注必须保留的内容
+    · 功能适配经验.txt → 各 mod 节（【二】20p、【三】clementia、【四】clone）：
+                             该 mod 历史遇到的问题及经验
 
   ═══ Mod A：20p（27 个 overrides）═══
 
@@ -145,17 +483,19 @@
       scripts/launch.mjs    — 20p-loader 入口
       server/lobby.js       — businessHook、setGameMode 加 'clone'
 
-    Override 文件（mods/玩法/20p/overrides/，共 24 个）：
-      server/http/static.js
-      server/match/Match.js
-      server/match/audit.js, choices.js, gamedata.js, pool.js, unite.js, waves.js
-      server/match/match/bossRounds.js, infra.js, phases.js, settle.js,
-                        setupVote.js, spDraft.js, unitePhase.js, views.js
-      server/match/player/acquire.js, basics.js, diy.js, economy.js
-      server/match/finalAssault.js
-      server/sim/damage.js, spec.js
-      server/lobby.js
-      shared/protocol.js
+    Override 文件（mods/玩法/20p/overrides/，共 27 个）：
+      server/lobby.js                          server/data.js
+      server/match/Match.js                    server/match/audit.js
+      server/match/finalAssault.js             server/match/gamedata.js
+      server/match/pool.js                     server/match/unite.js
+      server/match/match/platform.js           server/match/match/phases.js
+      server/match/match/setupVote.js          server/match/match/spDraft.js
+      server/match/match/views.js
+      server/match/player/diy.js               server/match/player/economy.js
+      server/sim/spec.js                       server/sim/content/bands/meta.js
+      server/sim/garrisons/battle.js
+      shared/constants.js                      shared/diy.js
+      shared/playerCapacity.js                 shared/protocol.js
 
     适配步骤：
       cd d:\yjw\Stronghold-Protocol-v0.3.1
@@ -170,24 +510,27 @@
     验证：
       □ 创建 20p 房间，poolGroups 正确
       □ 首领限伤开关正常
-      □ 禁用飞行开关正常
+      □ 禁用飞行开关正常（随机 3 种敌人不含飞行类）
       □ 联防随机化正常
       □ 移除原版模式正常（只剩 20p 可选）
       □ 6 人以上悬赏选择分组 UI 正常
       □ 各分组玩家进悬赏界面默认显示自己分组
+      □ 分组悬赏人机正常选择、超时正常触发
+      □ sweep 报告界面显示正常
 
-  ═══ Mod B：clementia（4 个 overrides + 3 个核心文件）═══
+  ═══ Mod B：clementia（5 个 overrides + 3 个核心文件）═══
 
     修改的核心文件（已在 Git 中，第一层处理）：
       public/js/ui/detailPanel.js   — desc||descRaw 优先级
       public/js/render/app.js       — ++layerPopSeq + _flags 透传
       data/garrisons.json           — 克莱门莎特质数据
 
-    Override 文件（mods/扩展角色/clementia/overrides/，共 4 个）：
+    Override 文件（mods/扩展角色/clementia/overrides/，共 5 个）：
       shared/diy.js
       server/sim/spec.js
-      public/js/render/app/info.js
-      public/js/ui/gameLogic/bonds.js
+      js/render/app/info.js
+      js/ui/gameLogic/bonds.js
+      js/ui/gameLogic/diy.js
 
     适配步骤：
       node mod-framework\scripts\gen-patches.js clementia
@@ -199,6 +542,7 @@
       □ 房间角色列表能看到克莱门莎图标
       □ 选人界面可以选克莱门莎
       □ DIY 界面能切换原版/改版、迅捷/突袭
+      □ 改版选择在重进房间后不丢失（freezeDiy 保留 _flags）
       □ 进入战斗后击杀计数正常，盟约能叠加
       □ 战斗面板显示阿戈尔+不屈+迅捷/突袭（非单阿戈尔）
       □ 非精锐特质每 3 击杀 +1 层，精锐每 3 击杀 +2 层
@@ -259,6 +603,8 @@
      public/js/render/app.js      保留 ++layerPopSeq + _flags 透传
      data/garrisons.json          保留 clementia 数据记录
      shared/constants.js          保留 ROOM_CAPACITIES 和 DEFAULT_SEATS 导出
+     public/css/screens/sweep.css 保留上游新版（我们无特有改动）
+     public/js/ui/hud.js          保留联防轮次条件渲染
      ──────────────────────────────────────────────────────────────
 
   d) 解决完所有冲突
@@ -316,8 +662,12 @@
   ─────────────────────────────────────────────────────────────────────
   第一层：核心更新             解压覆盖 → 还原 hook             git fetch + git merge v0.3.x
                               启动 → 重打 hook                 （一条命令，冲突自动标）
-  第二层：框架检查             无（靠经验）                     逐个组件确认
-  第三层：mod 适配             gen/check-patches               gen/check-patches + 逐 mod 验证
+  第二层：版本漂移排查         无（靠经验）                     1.4 git 采集改动清单 →
+                                                              只对该清单做新旧版检查+修复
+                                                              （核心合并后立即执行）
+  第三层：插件功能检查         无                               启动验证核心界面功能
+  第四层：框架检查             无（靠经验）                     逐个组件确认
+  第五层：mod 适配             gen/check-patches               gen/check-patches + 逐 mod 验证
   获取版本                    下载 zip                        Releases页面 / git tags
   冲突发现                    人肉对比 44 个文件               git 自动标出冲突行
   回滚                        手动恢复备份                     git reset --hard HEAD~1
@@ -326,10 +676,143 @@
 
 
 ===========================================================
-  近期变更记录（2026-10-25）
+  近期变更记录（2026-10-26）
 ===========================================================
 
-1. Git 重构
+13. L1 链路追踪排查（2026-10-26，第四轮）
+    从第2层开始逐层完整验证，做真正的链路追踪而非只看代码逻辑自洽
+
+    ── 第2层：版本漂移排查 ──
+    已修复（之前轮次）：
+      mod-framework/room.css：-361行 → 上游替换+mod样式追加（916行）
+      mod-framework/room.js：-68行 → 上游替换+mod逻辑注入（1100行）
+      mod-framework/bandDraft.js：+19行 → 上游替换+clone逻辑注入（512行）
+      mod-framework/game.js：+2行 → 上游替换+CloneAffinityPicker（1978行）
+    本轮新发现：
+      20p/teamPanel.js：-34行 → 上游替换+分页逻辑注入（225行）
+      20p/setupVote.js：缺少 _rerollStartAt.clear() → 补上上游新增语句
+
+    ── 第3层：插件功能检查 ──
+    验证上游 0.3.2 插件系统在 mod-framework 包装下不冲突：
+      modServer.js tryServeModFile 不拦截 /plugins/ /packs/ /cs/ /vs/ /p/ /studio/ ✅
+      versions/versionHosts 为可选参数，不影响现有 mod 逻辑 ✅
+
+    ── 第4层：mod-framework 框架兼容性 ──
+    发现并修复：
+      modServer.js 重复启动逻辑：main() 与入口块重复 handler 包装，
+      main() 成为死代码且缺少错误处理 → 合并为单一 main() 函数
+
+    ── 第5层：各 mod 功能验证 ──
+    20p mod L1 链路追踪：
+      disableFlying：room.js → lobby.js → Match.js → gd.factions → setupMatchWaves ✅
+      bossHitLimit：room.js → lobby.js → gamedata.js → combat.js → damage.js ✅
+      capacity：room.js → lobby.js → room.capacity → 广播 ✅
+      发现并修复：Match.js delete this.gd.factions 导致后续访问 undefined
+      改为 Object.defineProperty 恢复原始值
+    clementia mod L1 链路追踪：
+      data reload：resetData() + reloadDataSources() 均存在于上游 ✅
+      override 文件：spec.js diff=0, diy.js +13, bonds.js diff=0, info.js +1 ✅
+    clone mod L1 链路追踪：
+      10 个 modHook.on 注册点均正确 ✅
+    dupBand mod L1 链路追踪：
+      phase:bandDraft:enter hook 正确，bandDraft.js diff=0 ✅
+
+    新增通用经验（第28-30条）：
+    28. 代码提取重构完整性：提取 main() 后必须确认原入口点完全委托
+    29. delete 恢复 getter 的风险：后续代码仍访问会得到 undefined
+    30. mod 客户端 override 版本漂移：mods/*/public/ 也需要排查
+
+12. 全 mod 功能开关检查修复（2026-10-26，第二轮续）
+    测试环境：1主机+7机器人，全mod启用，逐个检查各mod功能
+
+    ── 上游更新遗留 ──
+    问题：sweep.css 残留 16 处 Git 合并冲突标记，sweep 报告界面无样式
+    修复：用上游 0.3.2 版本覆盖
+    归类：【零】0.6
+
+    ── 20p 禁用飞行开关 ──
+    问题1：后置过滤无效，随机 3 种敌人仍含飞行类
+    修复：在 setupMatchWaves 前通过 Object.defineProperty 遮蔽 gd.factions getter
+    问题2：冻结对象报错 Cannot assign to read only property 'involveRandom'
+    修复：创建 types 数组浅拷贝，飞行 type 用新对象替换
+    问题3：冻结对象报错 Cannot assign to read only property 'factions'
+    修复：Object.defineProperty 在 gd 实例上定义 own property 遮蔽原型 getter
+    归类：【二】2.6/2.7/2.8
+
+    ── 20p 悬赏决策界面 ──
+    问题1：客户端字段名错误 activeGroup.turn → undefined（应为 turnPid）
+    修复：choiceOverlay.js 字段名改为 turnPid
+    问题2：服务端全局 _turnToken/setDeadline 冲突，多组并发时 bot 不选/超时不触发
+    修复：每组独立 g._turnToken + g._turnTimer，分组模式用 this.later 调度
+    问题3：客户端+服务端双 bug 叠加导致界面完全不可用
+    修复：分别修复问题1和问题2
+    归类：【二】2.9/2.10/2.11
+
+    ── clementia 改版模式 ──
+    问题1：20p shared/diy.js override 遗漏 garrisonIds 赋值，特质不显示/叠层不触发
+    修复：diyRecordOf 中添加 clementia garrisonIds 设置
+    问题2：freezeDiy 丢弃 _flags 字段，改版面板显示原版
+    修复：freezeDiy 保留 _flags：...(Number.isInteger(p._flags) ? { _flags: p._flags } : {})
+    问题3：garrisonIds 不区分 elite/normal form，非精锐显示+2层
+    修复：通过 slot.status.equipLevel > 0 判断是否 elite form
+    问题4：garrisonIds 对应关系错误（精锐/非精锐与迅捷/突袭混淆）
+    修复：garrisonIds 只由精锐/非精锐决定，与迅捷/突袭无关
+    归类：【三】3.10/3.11/3.12/3.13
+
+    新增通用经验（第18-27条）：
+    18. 随机前修改候选集：后置过滤无效
+    19. Object.freeze 冻结对象：修改需创建新对象替换
+    20. Object.defineProperty 遮蔽 getter：整条链路冻结时的修改方案
+    21. Git 合并冲突残留：合并后必须全量搜索冲突标记
+    22. 多 mod override 同一文件：后加载版本必须完整包含所有 mod 逻辑
+    23. 序列化函数字段保留：新增字段时必须检查序列化路径
+    24. garrisonIds 与 form 类型：必须根据 form 区分
+    25. garrisonIds 与 bonds 独立：两个独立维度不能混淆
+    26. 多组并发竞态：每组必须有独立的 token/timer
+    27. 双 bug 叠加排查：客户端+服务端独立 bug 叠加时分别验证
+
+11. 全 mod 启用测试修复（2026-10-26）
+    测试环境：1主机+7机器人+1朋友，全mod启用，测试到第3回合
+    发现7个问题，6个已修复，1个待排查：
+
+    问题1：克莱门莎改版盟约只显示阿戈尔（缺不屈、突袭）
+      根因：augmentDiyRecord 中 _flags 位掩码检测遗漏
+      修复：clementia/overrides/shared/diy.js 添加完整位掩码逻辑
+
+    问题2：克隆投票计数位置在右上角
+      根因：.dband__votes 绝对定位与新布局冲突
+      修复：draft.css 从 right 改为 left
+
+    问题3：主机官方3D地图加载失败（⚠️ 待排查）
+      现象：主机加载失败显示默认地图+弹出下载链接，朋友正常
+      可能原因：CSP/路径/mod文件服务/localManifest
+
+    问题4：商店干员图片显示时装头像
+      根因：OperatorImage ownerId 默认 undefined 跟随玩家时装
+      修复：shopBar.js ownerId=${null} 强制默认外观
+
+    问题5：克隆倾向盟约选择框UI缺失
+      根因：CloneAffinityPicker 组件已定义但未导入渲染
+      修复：game.js 导入+渲染，game.css 添加 .ca-pick 定位
+
+    问题6：联防阶段轮次UI缺失
+      根因：服务端输出 round/roundsMax 但客户端未消费
+      修复：views.js 输出字段，hud.js 条件渲染"联防 X/Y"
+
+    问题7：分组悬赏UI未显示（★★★ 关键问题）
+      根因：版本漂移排查时将20p的A-type特有文件误覆盖
+      修复：重建 spDraft.js + choiceOverlay.js + game-panels.css
+      经验：版本漂移排查必须区分A-type（mod特有）和B-type（覆盖上游同名）
+
+    新增通用经验（第17-22条）：
+    17. 版本漂移排查必须区分A-type和B-type文件
+    18. 组件定义≠组件生效（必须导入+渲染+CSS定位）
+    19. 服务端数据输出→客户端UI消费完整链路
+    20. OperatorImage的ownerId三态语义
+    21. CSS定位与UI重构的兼容性
+    22. _flags位掩码的完整覆盖
+
+10. 策略选择界面 UI 版本漂移修复 + 全量排查（2026-10-25）
    - Stronghold-Protocol/ 变为 Git 仓库，追踪 upstream
    - 提交 1（tag: v0.3.1-base）：upstream v0.3.1 干净基线
    - 提交 2（HEAD）：10 个修改文件
@@ -337,7 +820,7 @@
 
 2. 流程优化
    - 改用 Releases 标签更新（git merge v0.3.x），不直接合并 master
-   - 明确三层递进流程：核心 → 框架 → mod
+   - 明确五层递进流程：核心合并 → 版本漂移排查 → 插件功能检查 → 框架检查 → mod 适配
    - 逐个 mod 细化适配步骤和验证清单
 
 3. 项目清理（2026-10-24）
@@ -396,6 +879,53 @@
    - 新增：6 人以上分组独立悬赏选择（A组/B组按钮、进度、倒计时）
    - 优化：各分组玩家进悬赏界面默认显示自己分组
    - 所有代码在 20p mod 目录，不影响核心层和其他模式
+
+9. 上游 0.3.2 升级适配（2026-10-25）
+   - 问题1：20p 客户端文件基于 0.3.1，缺少 heldDraftPub 等新增导出
+     修复：所有 20p public/ 文件替换为 0.3.2 上游 + 20p 特有逻辑
+   - 问题2：clementia diyModel.js 导入 DIY_OP_MODS from shared/diy.js，
+     但 20p 的 shared/diy.js override（reverse load order 优先）没有该导出
+     修复：DIY_OP_MODS 改为 diyModel.js 内部本地常量，不依赖共享文件
+   - 问题3：clementia diyModel.js 缺少 diyPrefKey 等 0.3.2 新增导出
+     修复：以 0.3.2 上游为基准重建 diyModel.js + clementia _flags 逻辑
+   - 问题4：clementia override 文件导出兼容性检查
+     结果：4 个 override 文件导出与 0.3.2 上游一致，无需修改
+   - 核心经验：
+     a) A-type 客户端文件（public/）必须以新版上游为基准重建
+     b) 多 mod override 同一文件时，只有 reverse load order 最后的版本生效
+     c) mod 特有常量应定义在自己的客户端文件中，不放在共享 override 里
+     d) 上游更新后必须对所有 mod 文件做导出兼容性检查
+
+10. 策略选择界面 UI 版本漂移修复 + 全量排查（2026-10-25）
+    - 问题：策略选择界面（bandDraft）决策顺序显示奇怪
+    - 根因：mod-framework/bandDraft.js 基于 v0.3.1 旧版，覆盖了上游 v0.3.2 新版
+      旧版缺少 dorder__card/dorder__art/dorder__face 分离式布局
+      这种版本漂移不报 SyntaxError，只是 UI 显示异常
+    - 修复：
+      a) mod-framework/bandDraft.js → v0.3.2 上游 + clone draft 逻辑
+      b) dupBand/bandDraft.js → v0.3.2 上游 + const taken = new Map()
+      c) mod-framework/game.js → v0.3.2 上游完整替换
+      d) mod-framework/room.js → 添加 VersionTag 导入和使用
+      e) mod-framework/room.css → 添加 .rs-clock__ver 样式
+      f) Stronghold-Protocol/draft.css → 添加 .dband__votes 样式
+    - 全量排查：对所有非原版上游文件做版本基准检查（行数对比+特征grep+哈希校验）
+      确认 8 个文件与上游一致、2 个中风险文件无关键功能缺失
+    - 新增流程步骤：第二层 全量版本漂移排查（核心合并后立即执行）
+    - 详见「功能适配经验.txt → 1.7 和 1.8」
+
+11. 第二层优化为"git 清单导向"的增量排查（日期见文件头部最后更新）
+    - 问题：第二层原为"全量排查"，需对所有非上游文件做行数对比/哈希校验，
+      范围大、耗时高，且靠"反向推断"找差异，仍有漏检风险
+    - 优化：
+      a) 新增第一层 1.4「版本差异采集」：合并后用
+         git diff <旧tag>..<新tag> --name-only
+         git log <旧tag>..<新tag> --name-status --diff-filter=ADR
+         精确提取上游本次改动的文件清单
+      b) 第二层精简为"只针对清单排查"，未在清单的文件=上游没改，
+         行数/哈希天然一致，无需浪费精力
+      c) 明确边界：纯新增 A-type 归第三层、server/ 核心层由 git 合并处理
+    - 价值：从"全量扫"变"按 git 清单精准扫"，更省时且零遗漏
+      （git 直接给真相，比行数对比/哈希的"反向推断"更可靠）
 
   Git 提交历史（6 个 commit）：
     368bd29  fix: add ROOM_CAPACITIES and DEFAULT_SEATS to shared/constants.js

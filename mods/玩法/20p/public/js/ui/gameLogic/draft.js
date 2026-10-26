@@ -37,6 +37,13 @@ export function normalizeDraft(draft, players = []) {
   return { order, turnPid, picks, skipsLeft, done };
 }
 
+export function heldDraftPub(last, pub) {
+  const players = Array.isArray(pub?.players) ? pub.players : last.players;
+  const picks = { ...(last.draft?.picks || {}) };
+  for (const p of Array.isArray(players) ? players : []) if (p && p.bandId && !picks[p.playerId]) picks[p.playerId] = p.bandId;
+  return { ...last, players, deadline: 0, draft: { ...last.draft, picks, turn: null, turnDeadline: 0 } };
+}
+
 /**
  * Normalise m.public.sp ({family, cards, turn, picks, order?}).
  * Cards: string ids or objects; picks: {playerId: cardIdx} | [{playerId, idx}] | card.takenBy.

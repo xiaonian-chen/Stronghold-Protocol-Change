@@ -96,7 +96,7 @@ export function install(modHook) {
 
   // ── lobby:beforeMatch  — inject clone configs from room ──────────────
 
-  modHook.on('lobby:beforeMatch', (opts, room) => {
+  modHook.on('lobby:beforeMatch', ({ room, opts }) => {
     // 20p mode: the 20p lobby already injects clone configs into opts.rules — nothing to do here
     if (room && room.gameMode === 'clone') {
       console.log(`[mod:clone] lobby before match — clone ON (20p, poolScale=${opts.rules?.poolScale}, hp=${opts.rules?.bossHpMult || 'locked'}, duck=${opts.rules?.duckReplaceMax || 'locked'})`);

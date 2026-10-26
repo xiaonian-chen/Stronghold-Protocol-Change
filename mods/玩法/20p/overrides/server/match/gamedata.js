@@ -136,7 +136,6 @@ export class GameData {
     this.tuning = this.raw.tuning && typeof this.raw.tuning === 'object' ? this.raw.tuning : {};
     /** standIn memo: chess id → composed 补位 record | null */
     this._standIns = new Map();
-    /** boss hit limit toggle (20p): set to false by room config to disable the BOSS_HIT_LIMIT cap on leader hits */
     this._bossHitLimitEnabled = true;
   }
 
@@ -540,11 +539,9 @@ export class GameData {
     return Object.keys(bands).filter((id) => this.bandAllowed(id)).sort((a, b) => numOr(bands[a].sortId, 99) - numOr(bands[b].sortId, 99) || (a < b ? -1 : 1));
   }
 
-  startLp(bandId, totalPlayers = 0) {
+  startLp(bandId) {
     const b = this.band(bandId);
-    const base = b && Number.isInteger(b.totalHp) && b.totalHp > 0 ? b.totalHp : this.defaultStartLp;
-    if (totalPlayers > 4) return Math.ceil(base * (1 + (totalPlayers - 4) * 0.1));
-    return base;
+    return b && Number.isInteger(b.totalHp) && b.totalHp > 0 ? b.totalHp : this.defaultStartLp;
   }
 
   /**

@@ -52,6 +52,12 @@
 //                                              then runs in a match host, server/match/host/): a b.result whose
 //                                              `cs` is missing or not opts.cs is refused like an implausible one — the
 //                                              server simulates that battle itself
+//   opts.version     string (optional)          a non-default official version's registry id (DESIGN §35.23,
+//                                              shared/versions.js; the lobby passes it for such a room only, the match
+//                                              then runs in that version's match host on its data): this.version, the
+//                                              test journal's init.options.version, the external AI's context.gameVersion,
+//                                              m.public / m.result `version` (the page reads a replayed result with it).
+//                                              Absent, unknown or 'act2autochess' ⇒ this.version null (the default)
 //   opts.data        frozen game data (server/data.js getData()); may lack keys while data is generated
 //   opts.log         { info, warn, error, debug }
 //   opts.now         () => ms epoch             injectable clock (Date.now in production)
@@ -151,6 +157,7 @@
 //   opts.combatSpeed   game seconds per real second while battles run in real time (default 2, the forced 2×)
 //   opts.botRehearsal  candidate layouts a bot simulates per prep before placing (default 3, 0 = heuristic only;
 //                      a whole battle per candidate: ~20–300 ms of CPU each, see server/match/bot.js createRehearsal)
+//   opts.botStrategy  a registered ID or trusted server-side strategy object; defaults to SP_BOT_STRATEGY / 'legacy'
 //   opts.botSliceMs    wall-clock ms of rehearsal per scheduler callback (default 8 with a real scheduler, unbounded
 //                      with a virtual one); the rest runs in later callbacks (scheduleBotPrep)
 //   opts.botRehearsalDelegate  offer each bot prep's layout rehearsal to the current host's browser instead (DESIGN §14;
@@ -206,6 +213,7 @@
 
 import { PHASE, modeIdFor } from '../../shared/constants.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
+import { DEFAULT_VERSION, versionById } from '../../shared/versions.js';
 import { Battle } from '../sim/Battle.js';
 import { DataSource } from '../sim/simdata.js';
 import { createRng, deriveSeed } from '../sim/rng.js';
@@ -215,6 +223,7 @@ import { SharedPool, SharedItemPool, createPoolGroups, drawDisabledBonds } from 
 import { PlayerState } from './PlayerState.js';
 import { EffectDispatcher, getDefaultRegistry } from './effectsMeta.js';
 import { setupMatchWaves } from './waves.js';
+import { getBotStrategy } from './botStrategies.js';
 import { GAME_SPEED, HEADLESS_SLICE_MS } from './fields.js';
 import { MatchPlatform } from './match/platform.js';
 import { MatchInfra } from './match/infra.js';
@@ -237,10 +246,9 @@ import { MatchSettle } from './match/settle.js';
 import { installTestTrace } from './testTrace.js';
 import { MatchTestCommands } from './match/testCommands.js';
 import { MatchOffers } from './match/offers.js';
+import { createExternalAI } from './llmGate.js';
 
 export { FLOW_TICKER_PRIORITY, DELAYS, BAND_TURN_SECONDS } from './match/common.js';
-
-import modHook from '../../../mod-framework/modHook.js';
 
 const BOT_REHEARSAL_DEFAULT = 3;
 /** Wall-clock ms of bot layout rehearsal per scheduler callback (real time; virtual time runs it in one go). */
@@ -283,12 +291,17 @@ export class Match {
     this.broadcastFn = opts.broadcast;
     this.onEndFn = opts.onEnd;
     this.data = opts.data && typeof opts.data === 'object' ? opts.data : {};
+    if (this.data.config?.version && !Object.hasOwn(this.data.config.modes || {}, this.modeId)) {
+      throw new RangeError(`Match: mode ${this.modeId} is unavailable in ${this.data.config.version.id}`);
+    }
     /** the room's content hash (opts.cs, DESIGN §32): every BattleSpec carries it */
     this.cs = isContentHash(opts.cs) ? opts.cs : null;
     /** the room's visual set (opts.vs, DESIGN §32.6): every BattleSpec names it */
     this.vs = isContentHash(opts.vs) ? opts.vs : null;
     /** a room with gameplay plugins (opts.requireCs): a client result must name this match's cs (reports.js) */
     this.requireCs = opts.requireCs === true && !!this.cs;
+    /** a non-default official version's id (opts.version, DESIGN §35.23), else null (the default, act2autochess) */
+    this.version = typeof opts.version === 'string' && opts.version !== DEFAULT_VERSION && versionById(opts.version) ? opts.version : null;
     // [ASSUMED] Only an array is a content list. Omitting the key (every vanilla match) leaves setDiy on KITTED_CHARS.
     // A copy so a caller's freeze or later mutation cannot change the check, and so the key stays off public views.
     if (Array.isArray(opts.kitted)) this.diyKitted = Object.freeze(opts.kitted.filter((id) => typeof id === 'string'));
@@ -313,10 +326,15 @@ export class Match {
     this.gd = new GameData(this.data, this.modeId);
     if (!this.difficulty) this.difficulty = this.gd.difficulty;
     this.isSolo = this.mode === 'solo' || this.gd.isSolo;
-    // 20p: disable flying enemies - when true FLY faction is excluded from random enemy type selection
-    this.gd._disableFlying = !!(this.rules && this.rules.disableFlying !== false);
-    /** Co-op always keeps manual online players first; the upstream setting cannot disable that rule. */
-    this.aiPicksLast = !this.isSolo;
+    /** 「AI 队友最后选择」 (opts.aiPicksLast, GitHub #338): humans draft before AI seats (MatchPhases.humansFirst) */
+    this.aiPicksLast = !this.isSolo && opts.aiPicksLast === true;
+    this.bossHitLimit = opts.bossHitLimit !== false;
+    this.characters = Array.isArray(opts.characters) ? opts.characters : [];
+    if (this.rules && 'bossHitLimit' in this.rules) {
+      this.gd._bossHitLimitEnabled = this.rules.bossHitLimit;
+    }
+    this.gd._disableFlying = !!(this.rules && this.rules.disableFlying === true);
+    console.log(`[20p] _disableFlying=${this.gd._disableFlying} rules.disableFlying=${this.rules?.disableFlying}`);
     this.ownsScheduler = !opts.scheduler;
     this.sched = opts.scheduler || new RealScheduler({ now: opts.now || Date.now, onError: (e) => this.reportError('timer', e) });
     this.registry = opts.registry || getDefaultRegistry();
@@ -327,6 +345,7 @@ export class Match {
     this.gameSpeed = Number.isFinite(opts.combatSpeed) && opts.combatSpeed > 0 ? Math.min(opts.combatSpeed, 200) : GAME_SPEED;
     /** layouts a bot rehearses per prep with the real simulation (bot.js; 0 = heuristic placement only) */
     this.botRehearsal = Number.isInteger(opts.botRehearsal) && opts.botRehearsal >= 0 ? Math.min(opts.botRehearsal, 8) : BOT_REHEARSAL_DEFAULT;
+    this.bot = getBotStrategy(opts.botStrategy ?? env('SP_BOT_STRATEGY'));
     /** wall-clock budget of one rehearsal slice (scheduleBotPrep) */
     this.botSliceMs = Number.isFinite(opts.botSliceMs) && opts.botSliceMs > 0 ? opts.botSliceMs : this.sched.virtual ? Infinity : BOT_SLICE_MS;
     /**
@@ -370,6 +389,14 @@ export class Match {
     this._rehearsalSeq = 0;
     /** how this match's delegated rehearsals ended (the log lines above; the tests read it) */
     this.rehearsalStats = { delegated: 0, answered: 0, takeovers: 0 };
+    /**
+     * The server's own simulation pool (server/workers/roomPool.js), or null when the operator started none. It is a
+     * placement decision only: `poolRehearsal` submits the same candidates the local run would simulate and falls back
+     * to simulating them here whenever the pool is absent, busy or broken.
+     */
+    this.simPool = opts.simPool || null;
+    /** how the bot rehearsals that were offered to `simPool` ended — separate from rehearsalStats (its keys are asserted) */
+    this.rehearsalPoolStats = { pooled: 0, accepted: 0, fallbacks: 0 };
     this.ds = dataSourceFor(this.data);
     /** client-side combat (DESIGN §14) — see the header */
     this.clientCombat = opts.clientCombat != null ? !!opts.clientCombat : envClientCombat();
@@ -432,7 +459,22 @@ export class Match {
     this.loneHuman = this.order.filter((p) => !p.isBot).length === 1;
 
     // per-match setup (DESIGN §6.5)
-    const setup = setupMatchWaves(this.gd, this.rngSetup);
+    if (this.gd._disableFlying) {
+      const origFactions = this.gd.factions;
+      const types = origFactions.types && typeof origFactions.types === 'object' ? origFactions.types : {};
+      const flyTypes = new Set();
+      if (types.FLY && types.FLY.involveRandom) flyTypes.add('FLY');
+      const modTypes = { ...types };
+      for (const t of flyTypes) { const tp = types[t]; if (tp && tp.involveRandom) modTypes[t] = { ...tp, involveRandom: false }; }
+      const modFactions = { ...origFactions, types: modTypes };
+      Object.defineProperty(this.gd, 'factions', { value: modFactions, configurable: true, writable: true });
+      console.log(`[20p] disableFlying: flyTypes=[${[...flyTypes]}]`);
+      var setup = setupMatchWaves(this.gd, this.rngSetup);
+      console.log(`[20p] disableFlying: chosen factions=[${setup.factions}]`);
+      Object.defineProperty(this.gd, 'factions', { value: origFactions, configurable: true, writable: true });
+    } else {
+      var setup = setupMatchWaves(this.gd, this.rngSetup);
+    }
     this.stageId = setup.stageId;
     this.stage = this.stageId ? this.gd.stage(this.stageId) : null;
     this.factions = setup.factions;
@@ -443,6 +485,7 @@ export class Match {
     this.staticInactiveBonds = bans.staticOff;
     this.bannedChess = bans.banned;
     this.poolGroups = createPoolGroups(this.gd, this.order, { banned: bans.banned });
+    this._20pActive = true;
     this.playerPools = new Map(this.poolGroups.flatMap((g) => g.playerIds.map((id) => [id, g.pool])));
     this.pool = this.poolGroups[0].pool;
     this.itemPool = new SharedItemPool(this.gd, () => this.order);
@@ -450,12 +493,6 @@ export class Match {
     // match (player/diy.js initDiyStock); no randomness is drawn here
     const off = new Set([...bans.drawn, ...bans.staticOff]);
     for (const ps of this.order) ps.initDiyStock(off);
-
-    modHook.emit('match:init', this);
-
-    if (this.rules && 'bossHitLimit' in this.rules) {
-      this.gd._bossHitLimitEnabled = this.rules.bossHitLimit;
-    }
 
     this.phase = PHASE.LOBBY;
     this.round = 0;
@@ -473,7 +510,8 @@ export class Match {
     this.setupRevision = 0;
     this.setupVote = null;
     this._setupVoteSeq = 0;
-    this._lastSetupVoteAt = -Infinity;
+    /** @type {Map<string, number>} last accepted 重刷本局 start per seat (30 s cooldown; DESIGN §28.21) */
+    this._rerollStartAt = new Map();
     this._turnTimer = null;
     this._pubDirty = false;
     this._pubTimer = null;
@@ -492,7 +530,8 @@ export class Match {
     this.sp = null;
     this.wave = null;
     this.bossWaves = null;
-    this.bossPairs = null; // drawn once per match; the hidden round retains partners and sides
+    this.bossPairs = null; // drawn for the Final Assault, drawn anew for the Hidden Core (GitHub #845, DESIGN §35.27)
+    this.bossPairsRound = null; // the round whose first plan drew bossPairs (a re-plan after a departure keeps them)
     this.fields = [];
     this.runner = null;
     /** playerId → fieldId */
@@ -520,6 +559,7 @@ export class Match {
     // [ASSUMED] A real scheduler keeps the 8 ms bot and headless slices, including a test match,
     // so one callback cannot run to HARD_CAP_SECONDS. Virtual time stays unbounded (the defaults
     // above). The input journal records the steps that callback took; replay stops there.
+    this.externalAI = createExternalAI(this, opts);
     if (this.test && opts.journal !== false) installTestTrace(this, opts);
   }
 }

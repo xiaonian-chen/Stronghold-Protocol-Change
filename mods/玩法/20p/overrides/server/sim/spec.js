@@ -42,6 +42,7 @@ import { toDataSource, withUnitLoadouts } from './simdata.js';
 import { isPotential, isCultivate } from '../../shared/potential.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
 import { BOSS_POOL_MIN_HP } from './constants.js';
+import { DEFAULT_VERSION, versionById, versionOfData } from '../../shared/versions.js';
 
 export const SPEC_VERSION = 1;
 
@@ -62,6 +63,7 @@ const specReplacer = (k, v) => (typeof v === 'number' && !Number.isFinite(v) ? (
  * @returns {object} a fresh JSON-safe object
  */
 export function buildBattleSpec(o = {}) {
+  if (o.version != null && !versionById(o.version)) throw new RangeError(`Unknown battle version ${o.version}`);
   const bossLike = o.kind === 'boss' || o.kind === 'hidden';
   const tl = Number(o.timeLimit);
   const spec = {
@@ -89,6 +91,7 @@ export function buildBattleSpec(o = {}) {
     // the content set the battle runs on and the art it was drawn with (header): not read by the sim
     ...(isContentHash(o.cs) ? { cs: o.cs } : {}),
     ...(isContentHash(o.vs) ? { vs: o.vs } : {}),
+    ...(o.version && o.version !== DEFAULT_VERSION ? { version: o.version } : {}),
     // morphPairing plus only. An official spec grows no key (identity and extra-field tests).
     ...(o.morphPairing === 'plus' ? { morphPairing: 'plus' } : {}),
   };
@@ -114,7 +117,6 @@ function cleanDiyPick(d) {
     if (!(typeof d.uniEquipId === 'string' && LOADOUT_ID.test(d.uniEquipId))) return null;
     out.uniEquipId = d.uniEquipId;
   }
-  // mod: preserve _flags for mods that rely on it (e.g., clementia mode selectors)
   if (Number.isInteger(d._flags)) out._flags = d._flags;
   return out;
 }
@@ -151,6 +153,9 @@ export { withUnitLoadouts };
 export function createBattleFromSpec(spec, dataSource, opts = {}) {
   if (!spec || typeof spec !== 'object') throw new TypeError('createBattleFromSpec: spec required');
   const s = jsonClone(spec);
+  if (s.version != null && (!versionById(s.version) || versionOfData(toDataSource(dataSource).raw) !== s.version)) {
+    throw new RangeError(`Battle version ${s.version} does not match loaded data`);
+  }
   const bossLike = s.kind === 'boss' || s.kind === 'hidden';
   let sharedBoss = opts.sharedBoss ?? null;
   if (!sharedBoss && bossLike && s.boss) sharedBoss = new LocalBossPool(s.boss.poolMax, s.boss.poolHp);
@@ -321,7 +326,7 @@ export function battleProgress(battle) {
   }
   if (battle && (battle.kind === 'boss' || battle.kind === 'hidden')) {
     const leaksBy = {};
-    for (const pid of Object.keys(pp)) leaksBy[pid] = Math.min(1e6, leakEntries(pp[pid]).reduce((n, l) => n + leakLpr(l), 0));
+    for (const pid of Object.keys(pp).slice(0, 4)) leaksBy[pid] = Math.min(1e6, leakEntries(pp[pid]).reduce((n, l) => n + leakLpr(l), 0));
     out.leaksBy = leaksBy;
   }
   return out;
@@ -404,7 +409,7 @@ function compactMods(m) {
 export function compactResult(res) {
   const r = res && typeof res === 'object' ? res : {};
   const perPlayer = {};
-  for (const pid of Object.keys(r.perPlayer || {})) {
+  for (const pid of Object.keys(r.perPlayer || {}).slice(0, 4)) {
     const p = r.perPlayer[pid] || {};
     const layerGains = {};
     for (const [k, v] of Object.entries(p.layerGains || {}).slice(0, 40)) if (isKey(k) && fnum(v) > 0) layerGains[k] = Math.min(1e4, fnum(v));

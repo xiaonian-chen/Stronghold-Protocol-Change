@@ -12,3 +12,4 @@ const modHook = {
 };
 
 export default modHook;
+export { modHook };

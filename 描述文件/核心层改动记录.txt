@@ -1,0 +1,327 @@
+# Stronghold Protocol 核心层改动记录
+# 范围：Stronghold-Protocol/ 内相对上游 v0.3.2 的改动
+# 组织：按上游更新指南五层递进归类
+# 用途：上游更新时按层逐步检查，每层确认对应改动是否保留/需合并
+# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复）
+
+
+================================================================================
+第一层：核心合并（Git 自动）— 可能冲突的文件
+================================================================================
+
+  以下文件被我们修改，git merge 时可能 CONFLICT，需人工裁决：
+
+  ── Hook 注入（7 个文件添加 modHook emit 调用）──
+
+  文件                                    Hook                              用途
+  ──────────────────────────────────────────────────────────────────────────────
+  scripts/launch.mjs                     modHook 初始化                    20p-loader 入口【20p】
+  server/lobby.js                        lobby:beforeMatch                业务逻辑拦截【20p/clone/dupBand】
+  server/match/Match.js                  match:init                       比赛初始化通知【20p/clone】
+  server/match/player/economy.js         _rollChessSlot/ItemSlot/shopSlots 商店槽位拦截【20p】
+  server/match/match/phases.js           phase:bandDraft:enter            策略阶段拦截【20p】
+  server/match/finalAssault.js           match:bossHp                     Boss HP 拦截【20p】
+  server/sim/content/bands/meta.js       match:duckReplace                鸭替换拦截【clone】
+
+  Hook 行格式：
+    import modHook from '../../../mod-framework/modHook.js';
+    modHook.emit('hookName', ...args);  // 或 modHook.emitUntil(...)
+  冲突策略：保留我们的 emit + 合并上游新逻辑
+
+  ── clementia 相关（3 个文件）──
+
+  [1] public/js/ui/detailPanel.js — GarrisonBlock 特质文本渲染优先级【clementia】
+      原：descRaw || desc → 改：desc || descRaw
+      原因：浏览器缓存导致 descRaw 残留旧值
+
+  [2] public/js/render/app.js — 盟约叠层弹出图标位置 + _flags 透传【clementia】
+      a) layerPopSeq 自增计数器：fx.pop(tex, `+${n}`, 0xffffff, ++layerPopSeq)
+         原因：layerPops.size 固定后图标重叠
+      b) 准备阶段 diy _flags 透传：diy 对象添加 _flags 展开运算符
+
+  [3] data/garrisons.json — clementia 运行时特质数据【clementia】
+      新增 garrison_clementia_kills_a/b（由 clementia mod 启动时自动生成）
+
+  ── 兼容性（1 个文件）──
+
+  [4] shared/constants.js — 禁用所有 mod 时的兼容性导出【mod-framework】
+      新增：export const ROOM_CAPACITIES / DEFAULT_SEATS
+      原因：mod-framework/room.js 始终加载，依赖这两个导出
+
+  ── UI/CSS（4 个文件）──
+
+  [5] public/css/screens/draft.css — .dband__votes 从 right 改为 left【clone】
+  [6] public/css/screens/game.css — 新增 .ca-pick 定位【clone】
+  [7] public/js/ui/shopBar.js — OperatorImage ownerId=${null}（强制默认外观）【通用】
+  [8] public/js/ui/hud.js — 联防轮次条件渲染 "联防 X/Y"【20p】
+
+  ── _flags 透传（5 个文件）──
+
+  [9]  server/match/match/views.js — _diyInfo() diy 添加 _flags【clementia】
+  [10] server/match/results.js — 战斗结果 diy 添加 _flags【clementia】
+  [11] server/match/player/round.js — 战斗单位 diy 添加 _flags【clementia】
+  [12] server/sim/simdata.js — getDiy 缓存键追加 _flags + loadout.diy 包含 _flags【clementia】
+  [13] public/js/ui/stats.js — 统计模块 diy 添加 _flags【clementia】
+
+  ── garrison 安装器（1 个文件）──
+
+  [14] server/sim/content/garrisons/battle.js — 新增 clementia_global_kills 安装器【clementia】
+
+  ── 服务端输出（1 个文件）──
+
+  [15] server/match/player/views.js — privateView 新增 affinityBondId 输出【clone】
+
+  ── 3D地图加载健壮性（3 个文件，2026-10-26 新增）──
+
+  [16] public/sw.js — Service Worker fetch 重试机制【通用】
+      原：cache miss 后直接 fetch(request)，失败即抛 TypeError
+      改：3 次重试循环，重试时用 new Request(url, { cache: 'no-store' }) 绕过浏览器 HTTP 缓存
+      原因：scene.bin 请求偶发 ERR_FAILED，一旦出现 F5 无法恢复（硬刷新才恢复）
+            SW 层 fetch 失败无重试，一次瞬断导致整个页面生命周期内 3D 场景不可用
+      影响范围：所有经过 SW 拦截的 /assets/ /fonts/ /media/ 请求
+
+  [17] public/js/render/board3d/load.js — 场景加载重试机制【通用】
+      改动 a) 新增 fetchWithRetry(url, opts, attempts=2) 函数
+             fetchText / fetchJson / fetchBuffer 改用 fetchWithRetry，各 2 次重试
+      改动 b) loadScenePack 拆分为 loadScenePackCore + 外层 3 次重试循环
+             每次间隔 800ms×attempt 递增，失败后 sceneCache.delete 允许重试
+      原因：SW 重试可能仍不够（SW 本身可能未激活或被绕过），页面层也需要独立重试
+      影响范围：所有 3D 场景加载（scene.json + scene.bin + lightmap + textures）
+
+  [18] server/http/files.js — .bin 文件不再压缩【通用】
+      原：COMPRESSIBLE 包含 '.bin'，brotli/gzip 压缩二进制顶点数据
+      改：从 COMPRESSIBLE 移除 '.bin'，.bin 文件以原始二进制传输
+      原因：scene.bin 是二进制顶点缓冲（2.4MB），压缩收益极小但增加出错风险
+            主机 localhost 支持 brotli，朋友 LAN IP 只支持 gzip — 如果 brotli
+            压缩异常只有主机受影响，与用户报告的"主机失败朋友正常"一致
+
+  ── 机变生成函数导出（1 个文件，2026-10-27 新增）──
+
+  [19] server/match/choices.js — 导出 scheduleFor/buildCards/formatCount【20p】
+      原：scheduleFor/buildCards/formatCount 为内部函数（function），不可被 override 导入
+      改：添加 export 关键字，使 20p spDraft.js 可导入以实现分组 family 一致性
+      原因：20p 分组机变需先统一决定 family 再为各组生成同 family 卡牌，
+            不能每组独立调用 generateDraft()（会随机到不同 family）
+      影响范围：仅影响导出可见性，不影响上游内部调用逻辑
+
+  合计：19 + 7(hook) = 26 个文件可能冲突
+
+
+================================================================================
+第一层附：上游合并冲突标记残留（非 Git CONFLICT，是手动合并遗漏）
+================================================================================
+
+  ── sweep.css（✅ 已修复）──
+    现象：sweep.css 中残留 16 处 <<<<<<< HEAD / ======= / >>>>>>> v0.3.2 标记
+    根因：手动合并上游 CSS 时未完全解决冲突，Git 标记残留在文件中
+    影响：浏览器无法解析 Git 标记语法，整个 CSS 文件解析失败，
+          sweep 报告界面完全没有样式渲染
+    修复：用 upstream-test 原版 v0.3.2 的 sweep.css 直接覆盖
+    状态：✅ 已修复（2026-10-26 从 upstream-test 恢复）
+    经验：git merge 后必须全量搜索 <<<<<<< / >>>>>>> 标记，
+          不仅检查 JS 文件，CSS/JSON/HTML 也必须检查
+
+
+================================================================================
+第二层：版本漂移排查 — 需检查的非上游文件
+================================================================================
+
+  核心合并后，需检查以下非上游文件是否基于新版上游：
+
+  ── mod-framework/public/（优先级最高，覆盖上游同名文件）──
+
+  文件                                    基于     mod 特有逻辑
+  ──────────────────────────────────────────────────────────────────────────────
+  js/screens/game.js                     v0.3.2   导入+渲染 CloneAffinityPicker（1978行）
+  js/screens/bandDraft.js                v0.3.2   clone draft 投票逻辑（512行）
+  js/screens/room.js                     v0.3.2   20p/clone 模式切换 + ConfigSelect（1100行）
+  css/screens/room.css                   v0.3.2   .rs-clock__ver + mod 特有样式（916行）
+
+  ── mods/玩法/20p/public/（A-type，mod 自有客户端文件）──
+
+  文件                                    基于     mod 特有逻辑
+  ──────────────────────────────────────────────────────────────────────────────
+  js/ui/teamPanel.js                     v0.3.2   分组分页（poolGroupSizes/pagePlayers/nav）（225行）
+  js/ui/choiceOverlay.js                 v0.3.2   分组悬赏 UI（GroupedChoiceView）
+  js/ui/gameLogic/draft.js               v0.3.2   分组数据解析（normalizeSpGroups）
+  js/screens/lobby.js                    v0.3.2   20p 房间 UI 扩展
+  css/screens/room.css                   v0.3.2   20p 房间样式
+  css/screens/game.css                   v0.3.2   20p 战斗样式
+  css/screens/game-panels.css            v0.3.2   分组样式（.spov__groups 等）
+  css/screens/lobby.css                  v0.3.2   20p 大厅样式
+  （其他 components/stats/net/runner/sw） v0.3.2   无特有改动，与上游一致
+
+  ── mods/扩展角色/clementia/public/（A-type）──
+
+  文件                                    基于     mod 特有逻辑
+  ──────────────────────────────────────────────────────────────────────────────
+  js/ui/diyModel.js                      v0.3.2   _flags 透传 + DIY_OP_MODS 本地常量
+  js/screens/diy.js                      v0.3.2   克莱门莎原版/改版 + 迅捷/突袭切换 UI
+
+  ★ 注意：A-type 文件（上游无同名对应）永远不应被版本漂移排查覆盖
+
+
+================================================================================
+第三层：插件功能检查 — 验证清单
+================================================================================
+
+  核心合并 + 版本漂移修复后，验证上游原版功能：
+
+  □ 标题界面正常显示
+  □ 创建同盟 / 独立模拟正常
+  □ 策略选择界面（bandDraft）UI 正常（dorder__card 分离式布局）
+  □ 悬赏选择界面正常
+  □ 战斗流程正常（开始→战斗→结算）
+  □ 房间版本标签（VersionTag）正常显示
+  □ 协议启动动画时序正常（DRAFT_HOLD_MS / BOOT_MIN_MS）
+
+
+================================================================================
+第四层：mod-framework 框架兼容性检查 — 组件清单
+================================================================================
+
+  组件                文件                        检查内容
+  ──────────────────────────────────────────────────────────────────────────────
+  patcher.js          mod-framework/lib/          overrides/ 文件替换到 require 缓存
+                      patcher.js                  启动后看 [patcher] 有无 MISSING 警告
+  modHook.js          mod-framework/modHook.js    事件总线 on/emit/hook
+                                                  确认上游 emit 调用未被破坏
+  gen-patches.js      mod-framework/scripts/      SHA-256 指纹生成
+  check-patches.js    mod-framework/scripts/      指纹比对 [OK]/[CHANGED]/[MISSING]
+  modManager.js       mod-framework/              mod 加载器
+                                                  启动后看 [mod:xxx] installed
+  modServer.js        mod-framework/              mod 文件服务（buildModFileRoots）
+                                                  reverse load order 优先级
+
+
+================================================================================
+第五层：逐个 Mod 适配验证 — Override 文件清单
+================================================================================
+
+  ═══ Mod A：20p ═══
+
+  核心层修改：2 个文件（Git 追踪，第一层处理）
+    scripts/launch.mjs — 20p-loader 入口
+    server/lobby.js    — businessHook + dupBand
+
+  Override 文件（mods/玩法/20p/overrides/，28 个）：
+    server/lobby.js                          server/data.js
+    server/match/Match.js                    server/match/audit.js
+    server/match/finalAssault.js             server/match/gamedata.js
+    server/match/pool.js                     server/match/unite.js
+    server/match/match/bossRounds.js → platform.js
+    server/match/match/phases.js             server/match/match/setupVote.js
+    server/match/match/spDraft.js            server/match/match/views.js
+    server/match/match/unitePhase.js         ← 2026-10-26 新增：联防多轮推进
+    server/match/player/diy.js               server/match/player/economy.js
+    server/sim/spec.js                       server/sim/content/bands/meta.js
+    server/sim/garrisons/battle.js
+    shared/constants.js                      shared/diy.js
+    shared/playerCapacity.js                 shared/protocol.js
+
+  适配命令：
+    node mod-framework/scripts/gen-patches.js 20p
+    node mod-framework/scripts/check-patches.js 20p
+
+  验证清单：
+    □ 创建 20p 房间，poolGroups 分组正确
+    □ 首领限伤开关正常
+    □ 禁用飞行开关正常（随机 3 种敌人不含飞行类）
+    □ 联防轮次显示 "联防 X/Y"
+    □ 联防多轮推进正常（第一轮结束→第二轮→…→结算，非第一轮直接结算）✅ 2026-10-26
+    □ 6 人以上悬赏选择分组 UI 正常（A组/B组按钮、进度、倒计时）
+    □ 各分组玩家进悬赏界面默认显示自己分组
+    □ 分组悬赏人机正常选择、超时正常触发
+    □ 分组悬赏倒计时正确（每人30s，非10s）✅ 2026-10-26
+    □ 分组悬赏选项可点击（非灰色不可交互）✅ 2026-10-26
+    □ 左侧组切换按钮可点击（pointer-events: auto）✅ 2026-10-26
+    □ 组切换导航在头像上方，按钮左右排列（◀ ▶），分组X/X文本醒目 ✅ 2026-10-26
+    □ 3D地图加载偶发失败后自动重试恢复（SW 3次 + 页面 3×2 次）✅ 2026-10-26
+    □ 分组机变各组卡牌类型一致（同回合 A/B/C 组全是同一种 family）✅ 2026-10-27
+    □ 歌蕾蒂娅/焰尾/潘格尼尼特质/策略正常触发（rollPool 三种模式完整）✅ 2026-10-27
+
+  L1 链路追踪状态：✅ 全部通过（2026-10-26）
+    disableFlying/bossHitLimit/capacity 三条核心链路完整
+    setupVote.js _rerollStartAt.clear() 已补上
+    所有 C2S 消息注册点验证通过
+
+  ═══ Mod B：clementia ═══
+
+  核心层修改：3 个文件（Git 追踪，第一层处理）
+    public/js/ui/detailPanel.js   — desc||descRaw
+    public/js/render/app.js       — ++layerPopSeq + _flags 透传
+    data/garrisons.json           — clementia 特质数据
+
+  Override 文件（mods/扩展角色/clementia/overrides/，5 个）：
+    shared/diy.js                  — augmentDiyRecord + garrisonIds（精锐/非精锐区分）
+    server/sim/spec.js             — _flags 透传
+    js/render/app/info.js          — renderInfo _flags 保留
+    js/ui/gameLogic/bonds.js       — 盟约 UI 扩展
+    js/ui/gameLogic/diy.js         — DIY _flags 透传
+
+  适配命令：
+    node mod-framework/scripts/gen-patches.js clementia
+    node mod-framework/scripts/check-patches.js clementia
+
+  验证清单：
+    □ DIY 界面切换「原版/改版」「迅捷/突袭」
+    □ 改版时特质面板正常显示（garrisonIds 关联）
+    □ 战斗面板显示阿戈尔+不屈+迅捷/突袭（非单阿戈尔）
+    □ 击杀计数 + 盟约叠加正常（garrison 叠层安装器）
+    □ 非精锐每 3 击杀 +1 层，精锐每 3 击杀 +2 层
+    □ freezeDiy 保留 _flags（改版选择在重进房间后不丢失）
+
+  ═══ Mod C：dupBand ═══
+
+  核心层修改：1 个文件（Git 追踪，第一层处理）
+    server/lobby.js — setGameMode('dupBand') + startMatch rules
+
+  复用 20p 的 override 文件：
+    mods/玩法/20p/overrides/server/lobby.js    — 3 处 dupBand 代码
+    mods/玩法/20p/overrides/shared/protocol.js — setGameMode 校验含 'dupBand'
+
+  验证清单：
+    □ 创建 dupBand 房间不报 invalid game mode
+    □ 乐队选择时队友可重复选相同策略
+
+  ═══ Mod D：clone ═══
+
+  核心层修改：无
+  Override 文件：无
+  纯钩子实现，modHook 正常则 clone 正常。
+
+  验证清单：
+    □ clone 房间可创建
+    □ 倾向盟约可选择（C2S g.setAffinityBond 已注册）
+    □ 进游戏 4 人共享相同阵容
+
+
+================================================================================
+附录：Git 提交历史
+================================================================================
+
+  99fff1d (tag: v0.3.1-base)  upstream v0.3.1 (clean baseline)
+  1645488                      mods: 20p hooks + clementia + dupBand
+  adf9749                      chore: remove node/ from repo + .gitignore
+  e6eb61d                      chore: remove dead code
+  2b85af9                      fix: restore plugins/_removed and _template
+  368bd29                      fix: add ROOM_CAPACITIES and DEFAULT_SEATS
+  (tag: v0.3.2-base)          upstream v0.3.2 merge
+  (HEAD)                       0.3.2 升级适配修复（A-type/B-type 同步 + 导出兼容）
+
+  ── 未提交的工作树改动（2026-10-26 第二轮测试修复）──
+
+  核心层（Stronghold-Protocol/ 内，直接修改上游文件）：
+    public/sw.js                          [16] SW fetch 3次重试 + cache: 'no-store' 降级
+    public/js/render/board3d/load.js      [17] fetchWithRetry + loadScenePack 3次重试
+    server/http/files.js                  [18] .bin 从 COMPRESSIBLE 移除
+
+  Mod 层（mods/玩法/20p/ 内）：
+    overrides/server/match/match/unitePhase.js  新增：联防多轮推进（_uniteNextOrSettle）
+    overrides/server/match/match/spDraft.js     修改：分组模式统一30s计时（spFirst）
+    public/js/ui/choiceOverlay.js               修改：pickSp 统一判断 + turnPid 字段映射
+    public/js/ui/teamPanel.js                   修改：导航移到顶部 + 左右箭头 + pointer-events
+    public/css/screens/game.css                 修改：.team__nav 样式优化（背景/圆角/文本醒目）
+
+  待修复：
+    public/css/screens/sweep.css          ⚠ Git 冲突标记残留（16处 <<<<<<< HEAD）

@@ -4,11 +4,14 @@
 //
 // Events:
 //   lobby:beforeMatch     ({ room, opts })                  — before Match is constructed, allows mods to inject opts
+//   lobby:roomMessage     (session, msg)                    — unhandled room message, return { ok/error } to handle
 //   match:init            (match)                           — after Match constructor finishes
-//   phase:bandDraft:enter (matchPhases)                      — before band draft turn starts
+//   phase:bandDraft:enter (matchPhases)                     — before band draft turn starts
 //   match:bossHp          (gd, bossId, aliveCount, ctx)     — boss HP calc, ctx = { base, tune, share, result }, return number to override
-//   match:duckReplace     (ctx, spawns, p, ownerPlayerId)   — duck replacement, return { ...p, ...override } to override params
+//   match:duckReplace     (ctx, spawns, p, ownerPlayerId)   — duck replacement, mutate p to override params
 //   match:shopSlots       (player, shopLevel, slots)        — shop slot counts, return { chess, item } to override
+//   match:rollChessSlot   (player, slot)                    — chess slot roll, mutate slot to override
+//   match:rollItemSlot    (player, ctx)                     — item slot roll, mutate ctx to override
 
 const _listeners = new Map();
 
@@ -60,6 +63,7 @@ const modHook = {
 };
 
 export default modHook;
+export { modHook };
 
 // Auto-load mods when modHook is first imported.
 // Circular import: modManager imports modHook (above), but Node handles this

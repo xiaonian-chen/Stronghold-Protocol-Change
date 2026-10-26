@@ -6,6 +6,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fsp from 'node:fs/promises';
+import { openBrowser } from '../Stronghold-Protocol/scripts/open-browser.mjs';
+import { classifyAddresses, hostUrl, KIND_LABEL } from '../Stronghold-Protocol/tools/doctor.mjs';
+import { c, mark } from '../Stronghold-Protocol/tools/setup.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -86,29 +89,6 @@ async function tryServeModFile(req, res) {
 
 async function main() {
   const opts = {};
-
-  const srv = await upstreamStartServer({ ...opts });
-
-  const upstreamHandler = srv.server.listeners('request')[0];
-  if (upstreamHandler) {
-    srv.server.removeAllListeners('request');
-    srv.server.on('request', async (req, res) => {
-      if (await serveModRegistry(req, res)) return;
-      if (await tryServeModFile(req, res)) return;
-      upstreamHandler.call(srv.server, req, res);
-    });
-  }
-
-  printBanner(srv);
-  return srv;
-}
-
-// Entry point
-if (isProcessEntry(import.meta.url)) {
-  process.on('unhandledRejection', (e) => console.error('[process] unhandled rejection', e));
-  process.on('uncaughtException', (e) => console.error('[process] uncaught exception', e));
-
-  const opts = {};
   const log = makeLogger(!!opts.quiet);
 
   let srv;
@@ -133,7 +113,26 @@ if (isProcessEntry(import.meta.url)) {
     });
   }
 
-  printBanner(srv);
+  const port = srv.port || Number(process.env.PORT) || 3000;
+  const localUrl = `http://localhost:${port}`;
+
+  const addrs = classifyAddresses().filter((a) => a.kind === 'lan' || a.kind === 'vpn' || a.kind === 'public');
+  const line = c.dim('─'.repeat(56));
+  console.log(`\n${line}`);
+  console.log(`${mark.ok} ${c.bold('服务器已启动')}   本机打开：${c.cyan(localUrl)}`);
+  if (addrs.length) {
+    console.log('  发给朋友（需要能访问这台电脑的网络）：');
+    for (const a of addrs.slice(0, 4)) console.log(`    ${c.cyan(hostUrl(a.address, port))}  ${c.dim(KIND_LABEL[a.kind])}`);
+  } else {
+    console.log(c.warn('  没有检测到可以分享的地址：朋友暂时无法连接（检查网线/Wi-Fi）。'));
+  }
+  console.log(c.dim('  建房后把 4 位「同盟密钥」或「复制链接」（…/?room=密钥）发给朋友。'));
+  console.log(c.dim('  朋友打不开？运行 node tools/doctor.mjs 检查防火墙。按 Ctrl+C 停止服务器。'));
+  console.log(`${line}\n`);
+
+  if (!/^(1|true|yes)$/i.test(process.env.SP_NO_BROWSER || '')) {
+    openBrowser(localUrl);
+  }
 
   let stopping = false;
   const stop = (signal) => {
@@ -145,6 +144,15 @@ if (isProcessEntry(import.meta.url)) {
   };
   process.on('SIGINT', () => stop('SIGINT'));
   process.on('SIGTERM', () => stop('SIGTERM'));
+
+  return srv;
+}
+
+// Entry point
+if (isProcessEntry(import.meta.url)) {
+  process.on('unhandledRejection', (e) => console.error('[process] unhandled rejection', e));
+  process.on('uncaughtException', (e) => console.error('[process] uncaught exception', e));
+  main();
 }
 
 export { main as startServer };

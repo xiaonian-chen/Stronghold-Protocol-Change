@@ -1,427 +1,772 @@
-================================================================================
-  功能适配经验 — 问题排查与解决方案汇总
-  最后更新：2026-10-25
-================================================================================
-
-本文档记录项目开发过程中遇到的所有问题、根因分析和解决方案，
-供后续维护参考，避免同类问题重复踩坑。
-
-
-================================================================================
-一、禁用所有 mod 后启动崩溃
-================================================================================
-
-  现象：
-    在 mod 管理器取消勾选所有 mod，启动游戏报脚本加载失败：
-    Uncaught SyntaxError: The requested module '../../../shared/constants.js'
-    does not provide an export named 'DEFAULT_SEATS' (at room.js:7:61)
-
-  根因：
-    mod-framework/public/js/screens/room.js 始终加载（无论 mod 是否启用），
-    它 import 了 shared/constants.js 的 DEFAULT_SEATS 和 ROOM_CAPACITIES。
-    上游核心 constants.js 没有这两个导出。
-    启用 20p mod 时，override 版 constants.js 被 patcher 替换，所以之前未暴露；
-    禁用所有 mod 后 patcher 不替换，核心 constants.js 缺少导出 → 崩溃。
-
-  解决：
-    在 Stronghold-Protocol/shared/constants.js 新增两行导出：
-      export const ROOM_CAPACITIES = Object.freeze([4, 8, 10, 16, 20]);
-      export const DEFAULT_SEATS = 4;
-    兼容性：mod 启用时 override 版本覆盖核心版本，新增导出透明无影响；
-            mod 禁用时核心版本提供默认值，room.js 正常加载。
-
-  经验：
-    mod-framework 的 public/ 文件会被所有模式加载，不能依赖"只有 mod 启用时才加载"。
-    如果 mod-framework 代码引用了上游核心没有的导出，必须在核心层补上默认值。
-
-
-================================================================================
-二、克莱门莎 mod 内容丢失
-================================================================================
-
-  现象：
-    重构后克莱门莎 mod 的特质、额外盟约等全部消失。
-
-  根因：
-    clementia/index.js 从 ../../../Stronghold-Protocol/server/data.js 导入 onLoadData，
-    但上游核心 data.js 没有导出 onLoadData 函数。
-    ESM import 失败 → 整个 mod 加载失败 → 所有功能消失。
-
-  解决：
-    在 server/data.js 中添加 onLoadData hook 机制：
-      - 导出 onLoadData(callback) 函数，注册回调到内部数组
-      - 在 loadData() 的 deepFreeze 前遍历回调数组，传入 data 对象
-      - 导出 resetData() 函数，重置单例以便 mod 触发重新加载
-
-  经验：
-    mod 如果依赖核心层未导出的函数，需要在核心层新增 hook 机制。
-    不要假设上游有某个 API——先检查上游源码确认。
-
-
-================================================================================
-三、克隆模式倾向盟约选择不了
-================================================================================
-
-  现象：
-    克隆模式下点击倾向盟约选项无反应，无法选择。
-
-  根因：
-    server/lobby.js 的 setGameMode 函数只允许 'original' 和 'dupBand' 两个值，
-    不接受 'clone'，导致 clone 模式的 setGameMode 请求被拒绝。
-
-  解决：
-    在 setGameMode 的校验白名单中添加 'clone'：
-      原：(v) => v === 'original' || v === 'dupBand'
-      改：(v) => v === 'original' || v === 'clone' || v === 'dupBand'
-
-  经验：
-    新增 gameMode 类型时，必须检查 lobby.js 的 setGameMode 校验白名单。
-    每种 gameMode 都需要在此白名单中注册才能被客户端设置。
-
-
-================================================================================
-四、首领限伤开关不生效
-================================================================================
-
-  现象：
-    房间 UI 有首领限伤开关，但关闭后高伤害干员打首领仍然被限伤。
-
-  根因：
-    限伤逻辑的完整链路有多个断点：
-    1. lobby.js 缺少 setBossHitLimit 消息的 dispatch case
-    2. Match.js 没有从 rules 读取 bossHitLimit 写入 gd
-    3. damage.js 的 leaderHitCancelled 没有读取 battle.flags.bossHitLimit
-
-  解决：
-    完整实现限伤开关全链路：
-    - lobby.js: 新增 bossHitLimit 字段、setBossHitLimit handler、dispatch case
-    - Match.js: match:init hook 中读取 rules.bossHitLimit 写入 gd._bossHitLimitEnabled
-    - gamedata.js: dp getter 新增 bossHitLimit 字段
-    - damage.js: leaderHitCancelled 开头检查 battle.flags.bossHitLimit === false
-
-  经验：
-    功能开关必须走完整链路验证：客户端 UI → C2S 消息 → 服务端处理 →
-    match rules → BattleSpec flags → 战斗引擎读取。任何一环缺失都会导致功能不生效。
-
-
-================================================================================
-五、克隆模式倾向盟约选择框文本不更新
-================================================================================
-
-  现象：
-    克隆模式选择倾向盟约后，选项实际生效了，但选择框内文本始终显示
-    「选择倾向盟约」，而不是所选的盟约名称。
-
-  根因：
-    服务端 privateView 输出中没有 affinityBondId 字段。
-    客户端从 privateView 读取当前选择的盟约 ID 来显示文本，
-    但服务端只输出了 bandId（策略盟约），没有输出 affinityBondId（倾向盟约）。
-
-  解决：
-    在 server/match/player/views.js 的 privateView 输出中，
-    在 bandId 字段后新增 affinityBondId 输出：
-      affinityBondId: this.affinityBondId || null,
-
-  经验：
-    客户端 UI 的文本显示依赖服务端输出的字段。
-    新增选择功能时，必须确认服务端 views 输出了客户端需要的所有字段。
-
-
-================================================================================
-六、悬赏选择分组 UI（20p 模式 4 人以上）
-================================================================================
-
-  现象：
-    20p 模式 6 人以上游玩时，悬赏选择变成 6 个（原版 3 个），
-    但所有玩家看到同一组选项，没有分组独立选择。
-
-  需求：
-    每分组随机 6 个悬赏，各分组依次选择，多组同时进行。
-    可按 A组/B组 按钮查看其他分组内容，各组下有子控件显示选择进度。
-
-  解决：
-    服务端（spDraft.js）：
-      - 重写 enterSpDraft()，每组独立生成 6 个悬赏
-      - 各组独立随机选择顺序
-      - 各组并行调用 startSpTurn() 同时开始选择
-
-    客户端（choiceOverlay.js + draft.js）：
-      - 新增 activeGroupIdx 状态管理、分组切换逻辑
-      - 分组标签页渲染（A组 0/3、B组 0/3）
-      - 组内玩家选择顺序列表（闪烁/绿色状态）
-      - 30 秒倒计时，超时自动随机选择
-
-    CSS（game-panels.css）：
-      - 新增 .spov__groups、.spov__group-btn、.spov__group-order、.spov__player 样式
-
-  经验：
-    分组功能只在 20p 模式下生效（groups && groups.length > 1 条件判断）。
-    克隆模式只有一组，groups 为 null，不显示分组 UI，不影响原有行为。
-    所有分组相关代码放在 20p mod 的 public/ 目录，不修改核心层。
-
-
-================================================================================
-七、悬赏界面默认分组优化
-================================================================================
-
-  现象：
-    B 组玩家进入悬赏界面后，默认显示 A 组内容，
-    需要手动点 B 组按钮才能看到自己分组的选择项。
-
-  根因：
-    choiceOverlay.js 的 activeGroupIdx 初始化为 useState(0)（A 组），
-    不管当前玩家属于哪个分组。
-
-  解决：
-    新增 groupInitRef = useRef(false) 追踪初始化状态，
-    用 useEffect 在分组数据首次加载时，自动将 activeGroupIdx 设为
-    玩家所在分组的索引：
-      useEffect(() => {
-        if (!groupInitRef.current && groups && groups.length > 1 && myGroup) {
-          const myIdx = groups.indexOf(myGroup);
-          if (myIdx >= 0 && myIdx !== activeGroupIdx) setActiveGroupIdx(myIdx);
-          groupInitRef.current = true;
-        }
-      }, [groups, myGroup]);
-
-  经验：
-    分组 UI 的默认视图应优先显示玩家自己分组的内容。
-    用 useRef 而非 useState 追踪初始化标志，避免不必要的重渲染。
-    只在首次触发，不覆盖用户后续的手动切换。
-
-
-================================================================================
-八、克莱门莎战斗面板额外盟约不显示（_flags 透传链路修复）
-================================================================================
-
-  现象：
-    克莱门莎改版模式进入战斗后，面板只显示单阿戈尔盟约，
-    不屈、迅捷/突袭盟约不显示。特质栏描述正常。
-
-  根因（多层）：
-    _flags 字段在从 DIY 选择到战斗面板的完整链路中，有多个位置被丢弃：
-
-    1. server/match/match/views.js _diyInfo()
-       构造 UnitInfo 的 diy 对象时只包含 { charId, skillIndex, uniEquipId }，
-       丢弃 _flags → 客户端从 UnitInfo 重组 diy 记录时 flags=0 → 不追加额外盟约
-
-    2. server/match/results.js
-       战斗结果界面的 diy 对象同样缺少 _flags
-
-    3. server/match/player/round.js
-       战斗单位初始化的 diy 对象缺少 _flags
-
-    4. server/sim/spec.js cleanDiyPick()
-       会清除 _flags 字段（只保留 charId/skillIndex/uniEquipId）
-
-    5. server/sim/simdata.js getDiy()
-       缓存键不含 _flags → 不同改版选项命中同一缓存条目
-       d.loadout.diy 不包含 _flags → 战斗引擎丢失自定义选项
-
-    6. public/js/render/app.js
-       准备阶段渲染器构造 diy 对象时不含 _flags
-
-    7. public/js/ui/stats.js
-       统计模块构造 diy 对象时不含 _flags
-
-  解决（逐个修复）：
-
-    [1-3] 服务端 UnitInfo 构造：在 diy 对象中添加 _flags 透传
-      ...(Number.isInteger(pick._flags) ? { _flags: pick._flags } : {})
-
-    [4] spec.js cleanDiyPick：在输出中保留 _flags
-      if (Number.isInteger(d._flags)) out._flags = d._flags;
-
-    [5] simdata.js getDiy：
-      缓存键追加 |f${pick?._flags ?? ''}
-      d.loadout.diy 在 _flags 非零时透传
-
-    [6] render/app.js：diy 对象在 pick._flags 非零时透传
-
-    [7] stats.js：diy 对象在 u.diy._flags 非零时透传
-
-  _flags 完整透传链路（修复后）：
-    lobby.js → player/diy.js → player/round.js → match/views.js → results.js
-        ↓
-    spec.js(cleanDiyPick保留_flags) → simdata.js(getDiy缓存键+loadout.diy)
-        ↓
-    simHost.js(ownerOps展开loadout.diy) → render/app.js → detailPanel.js
-        ↓
-    info.js(renderInfo保留_flags) → 面板显示额外盟约 ✓
-
-  经验：
-    自定义字段（如 _flags）的透传是"全链路问题"——任何一个环节丢失都会
-    导致最终结果错误。新增自定义字段时，必须追踪从输入到输出的每一个构造点：
-      - 服务端：lobby → player → match views → results → battle spec
-      - 战斗引擎：spec → simdata → loadout.diy
-      - 客户端：render → detailPanel → info
-    每个构造 diy 对象的位置都必须显式包含新字段。
-    缓存键必须包含所有影响结果的字段，否则不同选项会命中同一缓存。
-
-
-================================================================================
-九、克莱门莎 garrison 叠层不触发
-================================================================================
-
-  现象：
-    克莱门莎改版模式战斗中，击杀敌方后盟约层数不增加。
-
-  根因：
-    克莱门莎的 garrison 记录使用 effectKey: 'clementia_global_kills'，
-    但该键不在战斗引擎 battle.js 的 INSTALLERS 映射中。
-    install() 遍历所有 garrison 实例时，通过 INSTALLERS[key] 查找安装器，
-    找不到则跳过 → 没有注册 kill 事件监听 → 叠层永远不触发。
-
-  解决：
-    在 battle.js 的 INSTALLERS 中添加 clementia_global_kills 安装器：
-      clementia_global_kills(battle, list) {
-        for (const it of list) it.cnt = 0;
-        battle.on('kill', ({ killer, victim }) => {
-          if (!victim || victim.side !== 'enemy') return;
-          if (!killer || killer.side !== 'ally') return;
-          for (const it of list) {
-            if (!S.onField(it.unit)) continue;
-            it.cnt++;
-            if (it.cnt % Math.max(1, S.num(it.bb.check_cnt, 1)) === 0)
-              fireGain(battle, it);
-          }
-        });
-      },
-
-    逻辑：任意友方击杀敌方时，所有克莱门莎 garrison 实例的 cnt++，
-    每 check_cnt（3）次击杀调用 fireGain → 给自身所有已激活盟约加层。
-
-    非精锐 garrisonA: bb.bond_add_count = 1（每 3 击杀 +1 层）
-    精锐 garrisonB:   bb.bond_add_count = 2（每 3 击杀 +2 层）
-
-  经验：
-    新增 garrison 类型时，必须在 battle.js 的 INSTALLERS 中注册对应的安装器。
-    INSTALLERS 的 key 必须与 garrison 数据的 effectKey 完全匹配。
-    否则 install() 会静默跳过，没有任何报错——这是最难排查的问题类型。
-
-
-================================================================================
-十、精锐版特质描述文本显示错误
-================================================================================
-
-  现象：
-    精锐版克莱门莎特质描述显示"+1层"而非"+2层"。
-
-  根因：
-    GarrisonBlock 组件渲染用 descRaw||desc，浏览器 HTTP 缓存了旧的 descRaw
-    （非精锐版的+1层文本），而 desc 已更新为正确文本。
-
-  解决：
-    改为 desc||descRaw，优先取 desc（随 garrisons.json 更新而刷新）。
-
-  经验：
-    浏览器缓存可能导致 descRaw 残留旧值。优先取 desc 可避免此问题，
-    因为 desc 不经过 ESM 模块缓存，每次从 JSON 重新读取。
-
-
-================================================================================
-十一、精锐版叠层弹出图标重叠
-================================================================================
-
-  现象：
-    多个盟约同时叠层时，弹出图标重叠在同一位置。
-
-  根因：
-    layerPops.size 在三个盟约首次加入后固定为 3，
-    后续任何盟约叠层时所有 pop 都使用位置索引 3，导致图标重叠。
-
-  解决：
-    用 ++layerPopSeq 自增计数器替代 layerPops.size，
-    每次弹出使用唯一索引。
-
-  经验：
-    当多个元素共享同一位置索引时，必须用自增计数器而非固定集合大小。
-
-
-================================================================================
-十二、onLoadData 钩子时序问题
-================================================================================
-
-  现象：
-    clementia mod 注册的 onLoadData 回调不被触发。
-
-  根因：
-    simdata.js 在 ESM top-level await 阶段提前调用 getData()，
-    此时 mod 尚未加载，onLoadData 的回调数组为空。
-
-  解决：
-    clementia/index.js 的 install() 中调用 triggerDataReload()：
-      1. resetData() 重置 data.js 单例
-      2. getData() 重新加载，此时 onLoadData 回调已注册
-      3. reloadDataSources() 刷新 simdata.js 缓存
-
-  经验：
-    ESM top-level await 的执行时序早于动态 import 的模块。
-    如果 mod 需要在数据加载阶段注入内容，必须提供重新加载机制。
-
-
-================================================================================
-十三、garrison 数据注入跳过问题
-================================================================================
-
-  现象：
-    重启服务器后，garrisons.json 中的克莱门莎数据是旧版本。
-
-  根因：
-    onLoadData 回调中检测到 garrison_clementia_kills_a 已存在就跳过写入，
-    但磁盘上的数据可能是旧版（descRaw 文本过期）。
-
-  解决：
-    改为始终覆盖写入，无论 garrison 是否已存在：
-      if (data.garrisons.garrison_clementia_kills_a) {
-        data.garrisons.garrison_clementia_kills_a = garrisonA;  // 覆盖
-        data.garrisons.garrison_clementia_kills_b = garrisonB;  // 覆盖
-        return;
-      }
-
-  经验：
-    "已存在则跳过"的逻辑在数据?数据可能过期时是危险的。
-    如果数据有版本迭代，应始终覆盖以确保最新。
-
-
-================================================================================
-通用经验总结
-================================================================================
-
-  1. 全链路思维
-     新增自定义字段（如 _flags）时，必须追踪从输入到输出的每一个构造点。
-     任何一个环节丢失都会导致最终结果错误，且通常无报错。
-
-  2. 缓存键完整性
-     缓存键必须包含所有影响结果的字段。否则不同选项会命中同一缓存，
-     返回错误结果。simdata.js getDiy 的缓存键是典型案例。
-
-  3. 静默失败最危险
-     INSTALLERS 找不到 key 时静默跳过、cleanDiyPick 丢弃未知字段时静默通过、
-     patcher 替换失败时静默降级——这些都不报错，但功能完全失效。
-     新增逻辑时必须确认注册/查找路径完整。
-
-  4. mod-framework 公共代码的兼容性
-     mod-framework/public/ 下的代码始终加载，不能依赖"只有 mod 启用时才加载"。
-     如果引用了上游核心没有的导出，必须在核心层补上默认值。
-
-  5. gameMode 白名单
-     每种 gameMode 都必须在 lobby.js 的 setGameMode 校验白名单中注册。
-     新增模式时容易遗漏此步。
-
-  6. 功能开关全链路
-     开关必须走完整链路：客户端 UI → C2S 消息 → 服务端处理 →
-     match rules → BattleSpec flags → 战斗引擎读取。
-     任何一环缺失都会导致功能不生效。
-
-  7. 浏览器缓存陷阱
-     descRaw / ESM 模块缓存可能导致旧数据残留。
-     优先取每次重新读取的字段（如 desc），或提供版本化重新加载机制。
-
-  8. ESM 时序问题
-     top-level await 早于动态 import。mod 需要在数据加载阶段注入内容时，
-     必须提供重新加载机制（resetData + getData + reloadDataSources）。
-
-  9. 分组 UI 隔离
-     分组相关逻辑只在对应 mod 目录中实现，通过条件判断（groups && groups.length > 1）
-     确保不影响其他模式。不要修改核心层的 UI 代码。
+# 功能适配经验 — 问题排查与解决方案汇总
+# 组织：按功能模块归类，同模块不同问题归在一起
+# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复）
+
+
+################################################################################
+【零】上游版本更新（0.3.1 → 0.3.2）
+################################################################################
+
+  ── 0.1 mod-framework/public/ 文件版本漂移 ──
+    现象：策略选择界面 UI 异常（缺少 dorder__card 分离式布局等 v0.3.2 新增结构）
+    根因：mod-framework/public/ 下的 bandDraft.js/game.js/room.js 基于 v0.3.1 旧版，
+          优先级最高覆盖上游同名文件，但不报 SyntaxError（旧版有完整导出）
+    修复：用 v0.3.2 上游替换 + 手动加回 mod 特有逻辑
+    经验：mod-framework/public/ 文件版本漂移是最隐蔽的兼容性问题——
+          不报错但 UI 结构/样式与新版不匹配。上游更新后必须全量检查
+
+  ── 0.2 版本漂移排查误覆盖 A-type 文件 ──
+    现象：20p 分组悬赏 UI 消失，显示原版上游 UI
+    根因：版本漂移排查时将 20p 的 A-type 特有文件（spDraft.js/choiceOverlay.js/
+          game-panels.css）误当作 B-type 覆盖
+    修复：重建三个核心文件
+    经验：A-type（mod 特有，上游无同名对应）永远不应被版本漂移排查覆盖；
+          B-type（覆盖上游同名文件）才需要做版本基准检查
+
+  ── 0.3 20p 客户端文件导出缺失 ──
+    现象：报 SyntaxError: does not provide an export named 'heldDraftPub'
+    根因：20p 的 public/ 文件基于 v0.3.1，缺少 v0.3.2 新增导出
+    修复：所有 20p 客户端文件替换为 v0.3.2 上游 + 保留 20p 特有逻辑
+    经验：A-type 客户端文件上游更新时必须全面同步，以新版为基准重建
+
+  ── 0.4 clementia diyModel.js diyPrefKey 导出缺失 ──
+    现象：报 SyntaxError: does not provide an export named 'diyPrefKey'
+    根因：clementia diyModel.js 基于 v0.3.1，缺少 v0.3.2 新增导出
+    修复：以 v0.3.2 上游为基准重建 + 保留 _flags 透传逻辑
+    经验：A-type 文件上游更新时必须全面同步，不能只修报错的那一个导出
+
+  ── 0.5 clementia diy.js UI 异常 ──
+    现象：自选编队选择干员界面显示异常
+    根因：clementia diy.js 基于 v0.3.1 旧版 UI 架构，缺少 v0.3.2 新组件/布局
+    修复：整体替换为 v0.3.2 上游 + 在详情面板插入 _flags 切换代码
+    经验：上游 UI 重构时 mod 的 A-type 屏幕文件必须整体更新
+
+  ── 0.6 sweep.css Git 合并冲突标记残留 ──
+    现象：点击 S.W.E.E.P. 报告后界面完全异常，无样式渲染
+    根因：sweep.css 文件中残留 16 处未解决的 Git 合并冲突标记
+          （<<<<<<< HEAD / ======= / >>>>>>> v0.3.2），浏览器无法
+          解析这些 Git 标记语法，导致整个 CSS 文件解析失败
+    修复：用上游 0.3.2 版本的 sweep.css 直接覆盖（冲突双方中
+          v0.3.2 侧为正确版本，HEAD 侧为旧版）
+    经验：Git 合并冲突标记残留在 CSS/JS 文件中是最隐蔽的 UI 破坏源——
+          不报 SyntaxError（CSS 容错解析），但整文件样式全部失效。
+          合并上游更新后必须全量搜索 <<<<<<< / ======= / >>>>>>> 标记
+
+  ── 0.7 modServer.js 重复启动逻辑 ──
+    现象：main() 函数和 if(isProcessEntry) 入口块重复了服务器启动+handler包装逻辑
+    根因：重构时 main() 提取不完整，入口块保留了独立启动代码，
+          导致 main() 成为死代码且缺少错误处理/信号处理/浏览器打开
+    修复：合并为单一 main() 函数，入口块仅调用 main()
+    经验：代码提取重构时必须确认原入口点完全委托给新函数
+
+  ── 0.8 Match.js delete this.gd.factions 后续访问崩溃 ──
+    现象：禁用飞行开关生效后，后续 waves.js 访问 gd.factions 得到 undefined
+    根因：2.8 修复中用 delete this.gd.factions 恢复原 getter，
+          但后续代码仍通过 this.gd.factions 访问数据，delete 后得到 undefined
+    修复：改为保存原始 factions 对象，setupMatchWaves 执行后
+          用 Object.defineProperty 恢复原始值，而非 delete
+    经验：delete 恢复 getter 的前提是后续无代码通过该属性访问数据
+
+  ── 0.9 teamPanel.js 版本漂移（20p 客户端）──
+    现象：20p teamPanel.js 比 0.3.2 上游少 34 行，缺失上游新增功能
+    根因：20p override 基于 v0.3.1 旧版，只添加了分页逻辑
+    修复：上游替换 + 注入 20p 分页逻辑（poolGroupSizes/pagePlayers/nav）
+    经验：mod 的客户端 override 文件同样需要版本漂移排查
+
+  ── 0.10 setupVote.js 缺少 _rerollStartAt.clear() ──
+    现象：完成重投后冷却时间不清除，玩家无法再次发起重投
+    根因：20p override 基于 v0.3.1，缺少 v0.3.2 新增的
+          this._rerollStartAt.clear()
+    修复：在 completeSetupReroll 的 this.setupVote = null 后添加
+          this._rerollStartAt.clear()
+    经验：B-type override 不仅要保留 mod 特有逻辑，
+          还必须同步上游新增的功能逻辑
+
+  ── 0.11 override 重写函数功能残缺（rollPool 丢失默认池抽取模式）──
+    现象：歌蕾蒂娅特质（获得斯卡蒂/幽灵鲨/深巡）、焰尾特质（获得野鬃/灰毫/远牙）、
+          潘格尼尼策略（刷新获得拉特兰）全部不触发
+    根因：20p override 的 spDraft.js 中 rollPool() 只实现了 items 数组模式，
+          缺少 weighted 加权模式和默认池抽取模式（this.pool.roll），
+          而歌蕾蒂娅/焰尾/潘格尼尼使用的池（pool_char_abyssal/pool_char_kazimierz/
+          pool_char_later）均为默认模式（bond+minTier 过滤），rollPool 返回 null
+    修复：将原版 rollPool 完整实现（支持 weighted/items/默认三种模式）
+          复制到 20p spDraft.js
+    经验：override 重写上游函数时，必须逐一对比函数签名和功能完整性，
+          不能只保留"自己用到的"模式。被 garrison/band 等系统调用的
+          公共 API（rollPool/rollItemId 等）必须支持上游的所有调用模式
+
+  ── 0.12 分组机变 family 不一致（各组随机到不同卡牌类型）──
+    现象：9 人 3 组机变阶段，A 组 6 张全是装备/道具，B 组 6 张全是悬赏，
+          C 组 6 张全是战术，同回合各组卡牌类型完全不同
+    根因：20p enterSpDraft() 的分组逻辑对每个 poolGroup 独立调用
+          generateDraft()，而 generateDraft() 内部每次都独立做
+          weightedPick 随机决定 family（bounty/supply/shop/tactic），
+          导致各组随机到不同的 family
+    修复：先统一用 weightedPick 决定 family，再为各组用 buildCards()
+          生成同 family 的卡牌（每组卡牌内容可不同但类型一致）；
+          同时导出 choices.js 的 scheduleFor/buildCards/formatCount/FAMILY_NAMES
+    经验：分组/分池逻辑中，"先统一决定共享属性、再各自生成具体内容"是
+          基本原则。每组独立调用"包含随机决策的完整生成函数"会导致
+          各组结果不一致。应将随机决策提取到分组循环之外
+
+【一】
+
+################################################################################
+【一】mod-framework（mod 框架）
+################################################################################
+
+  ── 1.1 禁用所有 mod 后启动崩溃 ──
+    现象：取消勾选所有 mod，报 SyntaxError: does not provide an export named 'DEFAULT_SEATS'
+    根因：mod-framework/public/js/screens/room.js 始终加载，依赖 constants.js 的
+          DEFAULT_SEATS/ROOM_CAPACITIES，但上游核心没有这两个导出
+    修复：Stronghold-Protocol/shared/constants.js 新增两行导出（默认值）
+    经验：mod-framework 的 public/ 文件会被所有模式加载，不能依赖"只有 mod 启用时才加载"
+
+  ── 1.2 多 mod override 冲突（DIY_OP_MODS 导出缺失）──
+    现象：clementia 的 diyModel.js 导入 DIY_OP_MODS from shared/diy.js 报 SyntaxError
+    根因：20p 也有 shared/diy.js override，reverse load order 下 20p 版本优先加载，
+          20p 版本没有 DIY_OP_MODS 导出
+    修复：DIY_OP_MODS 改为 clementia diyModel.js 内部本地常量，不依赖共享 override
+    经验：多 mod override 同一文件时只有一个版本被加载。mod 特有常量/函数
+          应定义在自己的客户端文件中，不放在共享 override
+
+  ── 1.3 组件定义但未生效 ──
+    现象：CloneAffinityPicker 组件已定义但完全不显示
+    根因：组件未在 game.js 中导入渲染，也未添加 CSS 定位
+    修复：mod-framework/public/js/screens/game.js 导入+渲染，game.css 添加 .ca-pick 定位
+    归属：此功能为 clone mod 所有，但渲染入口在 mod-framework 的 game.js
+    经验：新增 UI 组件必须完成三步：定义 → 导入渲染 → CSS 定位
+
+
+################################################################################
+【二】20p mod（玩法扩展）
+################################################################################
+
+  ── 2.1 ROOM_CAPACITIES is not defined ──
+    现象：创建 20 人同盟报 ReferenceError
+    根因：20p overrides/shared/protocol.js 遗漏了 ROOM_CAPACITIES 导入
+    修复：import 语句添加 ROOM_CAPACITIES
+    经验：B-type override 更新时必须完整对比上游的 import 列表
+
+  ── 2.2 首领限伤开关不生效 ──
+    现象：关闭开关后高伤害干员打首领仍被限伤
+    根因：限伤逻辑全链路有多个断点（lobby dispatch 缺 case、Match 未读 rules、
+          damage.js 未读 flags）
+    修复：完整实现 UI → C2S → 服务端 → rules → flags → 引擎 全链路
+    经验：功能开关必须走完整链路验证，任何一环缺失都会导致功能不生效
+
+  ── 2.3 悬赏分组异常 + 无时间限制 + 选择卡住 ──
+    现象：玩家分到错误组、无 30s 倒计时、主机选择不了界面卡住
+    根因：enterSpDraft() 自行切片 humansOrder 而非使用 this.poolGroups；
+          _startGroupTurn 缺少 deadline 设置
+    修复：改用 this.poolGroups 分配玩家 + 添加 deadline 超时逻辑
+    经验：分组逻辑必须使用 poolGroups（按座位分配的权威分组），
+          不能自行切片。poolGroupSizes 只提供大小不包含玩家分配
+
+  ── 2.4 联防阶段轮次 UI 缺失 ──
+    现象：阶段胶囊只显示"联防"，不显示轮次（如"联防 1/3"）
+    根因：服务端 views.js 已输出 round/roundsMax，但客户端 hud.js 未消费
+    修复：hud.js 条件渲染 "联防 X/Y"
+    经验：服务端输出 → 客户端读取 → UI 渲染，三环缺一不可
+
+  ── 2.5 match:init 双触发导致时序问题 ──
+    现象：clone mod 先以 4p 模式初始化，然后 20p 触发第二次
+    根因：Match.js 构造函数和 platform.js start() 都触发 match:init
+    修复：移除构造函数中的 match:init + 直接在构造函数中设置 this._20pActive = true
+    经验：match:init 只应在 start() 中触发一次。其他 mod 需要读取的字段
+          应在构造函数中直接设置，不依赖 match:init 钩子
+
+  ── 2.6 禁用飞行类敌人开关不生效 ──
+    现象：开启禁用飞行开关后开始模拟，随机选的 3 种敌人类型仍包含飞行类
+    根因：原实现仅后置过滤已生成的 factions，但 setupMatchWaves 内部随机
+          已基于原始 involveRandom 列表完成选取，后置过滤无法改变已选结果
+    修复：改为在调用 setupMatchWaves 前临时排除飞行 type——通过
+          Object.defineProperty 在 gd 实例上定义 own property 遮蔽原型
+          factions getter，使 setupMatchWaves 读取到不含飞行 type 的
+          factions，调用后 delete 恢复原 getter
+    经验：随机选取逻辑必须在随机发生前修改候选集，后置过滤无效。
+          要影响 setupMatchWaves 的行为，必须在它读取数据前修改数据源
+
+  ── 2.7 禁用飞行开关：冻结对象无法修改（第一次报错）──
+    现象：开启禁用飞行开关弹服务器内部错误
+          TypeError: Cannot assign to read only property 'involveRandom' of object
+    根因：factions.types 中的对象被 Object.freeze 深度冻结，直接赋值
+          involveRandom = false 报错
+    修复：创建 types 数组的浅拷贝，对需要禁用的飞行 type 创建新对象
+          { ...original, involveRandom: false } 替换冻结对象
+    经验：游戏数据对象被深度冻结（Object.freeze），不能直接修改属性。
+          需要修改时必须创建新对象替换，保持原冻结对象不变
+
+  ── 2.8 禁用飞行开关：冻结对象无法修改（第二次报错）──
+    现象：修复 2.7 后仍报 TypeError: Cannot assign to read only property 'factions'
+    根因：尝试直接修改 gd.raw.factions 替换整个 factions 对象，但
+          gd.raw 本身也被 Object.freeze 冻结，无法赋值
+    修复：放弃修改 gd.raw，改用 Object.defineProperty 在 gd 实例上
+          定义 own property 'factions' 遮蔽原型 getter。这样
+          setupMatchWaves 读取 this.gd.factions 时拿到修改后的 factions，
+          调用后 delete this.gd.factions 恢复原 getter
+    经验：当整条数据链路都被冻结时，不能用赋值方式修改任何层级。
+          Object.defineProperty 在实例上定义 own property 是遮蔽原型
+          getter 的有效手段，无需复制大量内部函数代码，且无随机数
+          序列副作用
+
+  ── 2.9 悬赏决策界面无法选择（客户端字段名错误）──
+    现象：分组悬赏决策界面点击选项无反应，所有卡牌不可选
+    根因：choiceOverlay.js:118 构造 groupSp 时字段名错误：
+          activeGroup.turn → undefined（normalizeSpGroups 返回的字段名
+          是 turnPid），导致 cardPickable 始终返回 false
+    修复：activeGroup.turn → activeGroup.turnPid
+    经验：数据结构字段名变更时必须全量搜索消费方。normalizeSpGroups
+          的输出字段名与直觉不同（turnPid 而非 turn），容易遗漏
+
+  ── 2.10 悬赏分组人机不选/阶段卡死（服务端全局 token/deadline 冲突）──
+    现象：多组同时启动时，先启动的组 bot 不选、deadline 不触发，阶段卡死
+    根因：两个并发 bug 叠加——
+          Bug A：_startGroupTurn 和 _scheduleGroupBot 都用 ++this._turnToken
+          生成 token，多组同时启动时后设置的 token 覆盖前面的，先启动的
+          组回调执行时 token !== this._turnToken → 直接 return
+          Bug B：setDeadline 内部 this.cancel(this._phaseTimer) 取消前一个
+          timer，多组同时有人类玩家时后设置的 deadline 覆盖前面的，前面组
+          的超时回调被取消
+    修复：1. 每个组使用独立的 g._turnToken，各组互不干扰
+          2. 分组模式下用 this.later 代替 this.setDeadline 调度 deadline，
+          timer 存在 g._turnTimer 上
+          3. _applyGroupCard 中玩家选牌后取消当前组的 timer
+          4. _checkGroupsDone 中所有组完成时取消所有组的 timer
+          5. views.js 序列化每个组的 turnDeadline，客户端用当前活动组的
+          deadline 显示倒计时
+    经验：多组并发时全局 token/timer 是经典的竞态条件源。每组必须有独立
+          的 _turnToken 和 _turnTimer，单组模式走上游逻辑不受影响
+
+  ── 2.11 悬赏界面完全不可用（客户端+服务端双 bug 叠加）──
+    现象：悬赏决策界面点击不了、人机不选、阶段卡死——完全不可用
+    根因：2.9（客户端字段名错误导致 cardPickable=false）和
+          2.10（服务端全局 token/deadline 冲突导致 bot 不选/超时不触发）
+          两个 bug 同时存在，客户端不可选 + 服务端不推进 = 完全卡死
+    修复：分别修复 2.9 和 2.10
+    经验：界面完全不可用时往往有多个独立 bug 叠加。客户端 bug 阻止用户
+          操作，服务端 bug 阻止自动推进，两者同时存在才会完全卡死。
+          排查时必须分别验证客户端逻辑和服务端逻辑
+
+  ── 2.12 局内左侧组切换按钮点击不了 ──
+    现象：6人以上分组模式，局内左侧队伍面板的组切换按钮点击无反应
+    根因：.team 父容器 CSS 设置了 pointer-events: none（穿透点击到下层战场），
+          但 .team__nav 子元素没有 pointer-events: auto 覆盖，
+          导致导航按钮也继承 none 无法点击
+    修复：添加 .team__nav { pointer-events: auto } CSS 规则
+    经验：pointer-events: none 穿透设计时，所有需要交互的子元素都必须
+          显式设置 pointer-events: auto。CSS 继承是隐式的，容易遗漏
+
+  ── 2.13 悬赏选项点击不了（turnPid 字段映射错误）──
+    现象：20人分组模式，主机和朋友的悬赏决策界面选项都点击不了
+    根因：choiceOverlay.js 中 cardPickable 和 armedCard 判断使用了
+          顶层 sp 对象（无 turnPid），而非当前组的 turn 对应玩家。
+          pickSp 函数虽然正确但未被调用
+    修复：统一使用 pickSp 并正确映射 turn 字段到 turnPid
+    经验：分组模式下"当前轮到谁选择"的信息在组的 turn 字段中，
+          不能用顶层 sp（那是全局状态，分组模式下无意义）。
+          修复时必须确认所有判断点都使用了正确的数据源
+
+  ── 2.14 悬赏倒计时只有10秒 ──
+    现象：分组悬赏决策倒计时约10秒就结束，正常应为每人30秒
+    根因：spDraft.js 中 spFirst（首人选择时间）在分组模式下仍使用
+          上游默认值（较短），而非统一的30秒
+    修复：分组模式下 spFirst 统一设为 30s
+    经验：分组模式下的计时逻辑应与分组设计意图一致（每人独立30s），
+          不能沿用上游的非分组计时参数
+
+  ── 2.15 联防第一轮结束直接结算 ──
+    现象：20人5轮联防，第一轮倒计时结束就直接结算整个联防状态
+    根因：unite.js 的 settle 调用没有检查是否还有后续轮次。
+          nextUnitePlan 函数存在但从未被调用
+    修复：新增 unitePhase.js override，拦截 settle 调用，
+          实现 _uniteNextOrSettle：当前轮 < 总轮次 → 重置倒计时+推进轮次，
+          当前轮 = 总轮次 → 执行原 settle
+    经验：多轮次机制必须在"结算"动作前检查轮次状态。settle 是终态动作，
+          不能直接调用，必须经过轮次检查。新增 override 文件
+          unitePhase.js 比修改原 unite.js 更安全（不破坏上游逻辑）
+
+  ── 2.16 组切换导航UI优化 ──
+    现象：组切换按钮为上下箭头，分组X/X文本不明显，导航控件在头像下方
+    根因：初始实现未考虑用户体验细节
+    修复：1) 按钮改为左右箭头
+          2) 分组X/X文本加粗加深（font-weight:700, color加深）
+          3) 整个导航控件移到头像上方（DOM 顺序调整）
+          4) 添加背景、圆角、hover 效果
+    经验：分组导航是高频操作控件，必须醒目易用。上下箭头语义
+          不如左右（翻页习惯），位置在上方更符合视觉层级
+
+
+################################################################################
+【三】clementia mod（角色扩展）
+################################################################################
+
+  ── 3.1 mod 内容丢失（onLoadData 未导出）──
+    现象：重构后克莱门莎特质、额外盟约全部消失
+    根因：clementia 从 server/data.js 导入 onLoadData，但上游没导出该函数
+    修复：在 server/data.js 中添加 onLoadData hook 机制
+    经验：mod 依赖核心层未导出的函数时，需在核心层新增 hook 机制
+
+  ── 3.2 onLoadData 钩子时序问题 ──
+    现象：clementia 注册的 onLoadData 回调不被触发
+    根因：simdata.js 在 ESM top-level await 阶段提前调用 getData()，
+          此时 mod 尚未加载
+    修复：clementia install() 中调用 triggerDataReload() 重置+重新加载
+    经验：ESM top-level await 早于动态 import，mod 需提供重新加载机制
+
+  ── 3.3 garrison 数据注入跳过问题 ──
+    现象：重启后 garrisons.json 中的克莱门莎数据是旧版本
+    根因：检测到 garrison 已存在就跳过写入，但磁盘数据可能过期
+    修复：改为始终覆盖写入
+    经验："已存在则跳过"在数据可能过期时是危险的，应始终覆盖确保最新
+
+  ── 3.4 _flags 透传链路修复（战斗面板额外盟约不显示）──
+    现象：改版模式进入战斗后面板只显示单阿戈尔盟约
+    根因：_flags 字段在 7 个位置被丢弃（views/results/round/spec/simdata/render/stats）
+    修复：逐个添加 _flags 透传 + 缓存键追加 _flags
+    经验：自定义字段的透传是全链路问题，新增时必须追踪从输入到输出的
+          每一个构造点。缓存键必须包含所有影响结果的字段
+
+  ── 3.5 改版盟约列表不完整（_flags 位掩码检测遗漏）──
+    现象：改版突袭点确定之后，外面只显示阿戈尔，缺不屈、突袭
+    根因：augmentDiyRecord 中 _flags 位掩码条件判断遗漏
+    修复：添加完整位掩码检测（bit 1=改版追加 indomShip，bit 0=突袭追加 raidShip）
+    经验：_flags 位掩码修改时必须逐位确认所有组合（00/01/10/11）
+
+  ── 3.6 改版特质面板不显示（garrisonIds 缺失）──
+    现象：改版模式休整期点击看不到改版面板
+    根因：diyRecordOf 只修改了 bonds 数组，没有添加 garrisonIds 字段
+    修复：改版时添加 rec.garrisonIds（迅捷→garrisonA，突袭→garrisonB）
+    经验：DIY 干员特质显示依赖 garrisonIds。修改 bonds 只影响盟约列表，
+          不影响特质面板。新增改版逻辑时必须同时设置 garrisonIds
+
+  ── 3.7 garrison 叠层不触发 ──
+    现象：击杀敌方后盟约层数不增加
+    根因：effectKey 'clementia_global_kills' 不在 INSTALLERS 映射中，静默跳过
+    修复：在 battle.js 的 INSTALLERS 中添加 clementia_global_kills 安装器
+    经验：新增 garrison 类型时必须在 INSTALLERS 中注册。INSTALLERS 找不到
+          key 时静默跳过不报错——这是最难排查的问题类型
+
+  ── 3.8 精锐版特质描述文本显示错误 ──
+    现象：精锐版显示"+1层"而非"+2层"
+    根因：GarrisonBlock 用 descRaw||desc，浏览器缓存了旧 descRaw
+    修复：改为 desc||descRaw 优先取 desc
+    经验：浏览器缓存可能导致 descRaw 残留旧值，优先取每次重新读取的字段
+
+  ── 3.9 精锐版叠层弹出图标重叠 ──
+    现象：多个盟约同时叠层时弹出图标重叠
+    根因：layerPops.size 固定为 3 后所有 pop 用同一位置索引
+    修复：用 ++layerPopSeq 自增计数器替代 layerPops.size
+    经验：多个元素共享同一位置索引时，必须用自增计数器而非固定集合大小
+
+  ── 3.10 改版特质不显示/击杀叠层不触发（20p diy.js override 遗漏）──
+    现象：clementia 改版模式下特质不显示、击杀叠层不触发
+    根因：20p 和 clementia 都 override 了 shared/diy.js，但 20p 后加载
+          优先级更高。20p 版本包含了 clementia 的 bonds 扩展逻辑
+          （_flags & 2 判断），但遗漏了 garrisonIds 的设置——静默失效
+    修复：在 diyRecordOf 中添加 if (charId === 'char_4231_clemnt' && (flags & 2))
+          { rec.garrisonIds = [...] }
+    经验：多 mod override 同一文件时，后加载的版本必须完整包含所有
+          mod 的逻辑。遗漏不报错——静默失效是最难排查的问题类型
+
+  ── 3.11 改版面板显示原版（freezeDiy 丢弃 _flags）──
+    现象：clementia 改版面板显示原版（特质/盟约均为原版内容）
+    根因：lobby.js 的 freezeDiy 函数在存储 DIY picks 时只保留
+          charId/skillIndex/uniEquipId，丢弃了 _flags 字段
+    修复：freezeDiy 保留 _flags：...(Number.isInteger(p._flags) ? { _flags: p._flags } : {})
+    经验：freezeDiy/Object.freeze 序列化函数必须保留所有自定义字段，
+          否则下游消费方拿不到完整数据。新增字段时必须检查序列化路径
+
+  ── 3.12 非精锐面板显示+2层（garrisonIds 不区分 elite/normal）──
+    现象：clementia 非精锐面板显示"+2层"（应为"+1层"）
+    根因：shared/diy.js 的 garrisonIds 选择只看 _flags & 1（迅捷/突袭），
+          不区分 elite/normal form。normal 和 golden 两个 record 都设置了
+          相同的 garrisonIds，当 _flags & 1 = 1（突袭）时都用 kills_b（+2层）
+    修复：通过 slot.status.equipLevel > 0 判断是否是 elite form：
+          非精锐始终用 kills_a（+1层），精锐+突袭用 kills_b（+2层），
+          精锐+迅捷用 kills_a（+1层）
+    经验：DIY 干员有 normal/golden 两个 form，diyRecordOf 被调用两次
+          分别生成两个 record。garrisonIds 必须根据 form 类型区分，
+          不能只看 _flags 位掩码
+
+  ── 3.13 garrisonIds 对应关系错误 ──
+    现象：修复 3.12 后精锐+迅捷仍显示+2层
+    根因：对应关系理解错误——特质的+1/+2只由精锐/非精锐决定，
+          迅捷/突袭只影响 bonds 类型，不影响 garrisonIds
+    修复：rec.garrisonIds = [isElite ? 'garrison_clementia_kills_b'
+          : 'garrison_clementia_kills_a']（与迅捷/突袭无关）
+    经验：garrisonIds（特质叠层+1/+2）和 bonds（盟约类型）是两个
+          独立维度，修改时必须分别确认对应关系，不能混淆
+
+
+################################################################################
+【四】clone mod（模式扩展）
+################################################################################
+
+  ── 4.1 倾向盟约选择不了──
+    现象1：克隆模式下点击倾向盟约选项无反应
+    根因：lobby.js setGameMode 只允许 'original' 和 'dupBand'，不接受 'clone'
+    修复：白名单添加 'clone'
+    经验：新增 gameMode 类型时必须检查 setGameMode 校验白名单
+
+    现象2：点击下拉选项弹"无效的请求"
+    根因：C2S 协议未注册 g.setAffinityBond，客户端 validateC2S 拒绝发送
+    修复：20p overrides/shared/protocol.js C2S 添加 'g.setAffinityBond': { bondId: nullable(isId) }
+    归属：此功能为 clone mod 所有，但因 reverse load order 修复位置在 20p 的 protocol.js
+    经验：新增 C2S 消息类型时必须在协议中注册，否则客户端发送被拦截
+
+  ── 4.2 倾向盟约选择框文本不更新 ──
+    现象：选择后选项生效但文本始终显示"选择倾向盟约"
+    根因：服务端 privateView 没有输出 affinityBondId 字段
+    修复：views.js privateView 新增 affinityBondId: this.affinityBondId || null
+    经验：客户端 UI 文本显示依赖服务端输出的字段
+
+  ── 4.3 投票计数位置异常 ──
+    现象：克隆投票计数显示在右上角，与其他策略信息重叠
+    根因：.dband__votes 绝对定位为 right/top，与新布局冲突
+    修复：draft.css 从 right 改为 left
+    经验：上游 UI 重构后原有绝对定位可能与新布局冲突
+
+
+################################################################################
+【五】素材与资源
+################################################################################
+
+  ── 5.1 素材下载失败 + 疯狂弹下载链接 ──
+    现象：大量文件下载失败，浏览器弹出下载链接对话框
+    根因：国内网络 raw.githubusercontent.com 不稳定，磁盘素材不完整
+    修复：--asset-source=mirror --concurrency=8 多次重试 + 本地 extract.py 提取
+    经验：素材下载幂等可安全重试。284 个 dropped leaves 需本地游戏客户端提取
+
+  ── 5.2 主机官方3D地图加载失败（偶发性）──
+    现象：20人房主机官方3D地图加载失败，显示默认3D地图+弹下载链接
+          朋友端正常显示。按F5刷新无效，硬刷新(Ctrl+Shift+R)临时恢复
+          但F5又出问题。重开服务器彻底消除。不是必现但一旦出现就持续
+    根因：三层问题叠加——
+          1) Service Worker 层：sw.js 拦截 /assets/~<hash>/ 请求后
+             cache miss → fetch(request)，失败直接抛 TypeError，
+             无重试无降级。一次瞬断导致整个页面生命周期内 3D 场景不可用
+          2) 浏览器 HTTP 缓存：F5 使用缓存协商，如果缓存了异常响应
+             则后续请求继续失败。硬刷新绕过缓存所以临时恢复
+          3) 服务器压缩：.bin 文件被 brotli 压缩，主机 localhost
+             支持 brotli（安全上下文），朋友 LAN IP 不支持（非安全上下文
+             只支持 gzip）。brotli 压缩异常只影响主机，与"主机失败朋友正常"一致
+    修复：三层加固——
+          1) sw.js：3次重试循环，重试时 new Request(url, { cache: 'no-store' })
+             绕过浏览器 HTTP 缓存
+          2) load.js：fetchWithRetry 函数（2次重试）+ loadScenePack 整体
+             3次重试（拆分为 loadScenePackCore + 外层循环）
+          3) files.js：.bin 从 COMPRESSIBLE 移除，不再压缩二进制顶点数据
+    经验：Service Worker 拦截请求后必须添加重试逻辑，否则一次网络瞬断
+          就会导致整个页面生命周期内功能不可用。F5 无法恢复是因为 SW
+          仍在控制页面，只有硬刷新（新 SW 生命周期）才能恢复。
+          .bin 等大体积二进制文件压缩收益极小但增加出错风险，
+          主机 localhost 支持 brotli 而朋友 LAN IP 不支持，
+          压缩方式差异可能是"只有主机出问题"的根因之一
+
+
+################################################################################
+【六】通用经验速查
+################################################################################
+
+  1.  全链路思维：新增自定义字段时必须追踪从输入到输出的每一个构造点
+  2.  缓存键完整性：缓存键必须包含所有影响结果的字段
+  3.  静默失败最危险：INSTALLERS/patcher/cleanDiyPick 静默跳过不报错
+  4.  mod-framework 兼容性：public/ 文件始终加载，不能依赖 mod 启用
+  5.  gameMode 白名单：每种模式必须在 setGameMode 校验中注册
+  6.  功能开关全链路：UI → C2S → 服务端 → rules → flags → 引擎
+  7.  浏览器缓存陷阱：优先取每次重新读取的字段（desc > descRaw）
+  8.  ESM 时序问题：top-level await 早于动态 import，需重新加载机制
+  9.  A-type vs B-type：A-type（mod特有）不覆盖，B-type（覆盖上游）才检查
+  10. 组件定义 ≠ 组件生效：定义 → 导入渲染 → CSS 定位，三步缺一不可
+  11. 服务端输出 → 客户端消费 → UI 渲染，三环缺一不可
+  12. OperatorImage ownerId：undefined=跟随时装，null=强制默认，playerId=指定玩家
+  13. _flags 位掩码：修改时必须逐位确认所有组合
+  14. garrisonIds 与特质面板：修改 bonds 不影响特质，必须同时设 garrisonIds
+  15. C2S 协议注册：新增消息类型时必须注册，否则客户端发送被拦截
+  16. 分组用 poolGroups：不能自行切片 humansOrder
+  17. match:init 只触发一次：在 start() 中触发，字段在构造函数中直接设置
+  18. 随机前修改候选集：后置过滤无效，必须在随机发生前修改数据源
+  19. Object.freeze 冻结对象：游戏数据被深度冻结，修改需创建新对象替换
+  20. Object.defineProperty 遮蔽 getter：整条链路冻结时，在实例上定义
+      own property 遮蔽原型 getter，调用后 delete 恢复
+  21. Git 合并冲突残留：合并上游后必须全量搜索 <<<<<<< / >>>>>>> 标记，
+      CSS 中残留不报错但整文件样式失效
+  22. 多 mod override 同一文件：后加载版本必须完整包含所有 mod 逻辑，
+      遗漏不报错——静默失效
+  23. 序列化函数字段保留：freezeDiy/Object.freeze 等必须保留所有自定义
+      字段，新增字段时必须检查序列化路径
+  24. garrisonIds 与 form 类型：DIY 干员有 normal/golden 两个 form，
+      garrisonIds 必须根据 form 区分，不能只看 _flags
+  25. garrisonIds 与 bonds 独立：garrisonIds（+1/+2）和 bonds（盟约类型）
+      是两个独立维度，修改时分别确认对应关系
+  26. 多组并发竞态：每组必须有独立的 _turnToken 和 _turnTimer，
+      全局 token/timer 是竞态条件源
+  27. 双 bug 叠加排查：界面完全不可用往往是客户端+服务端独立 bug 叠加，
+      必须分别验证
+  28. 代码提取重构完整性：提取 main() 后必须确认原入口点完全委托，
+      不能在两处保留相同逻辑
+  29. delete 恢复 getter 的风险：delete 后如果后续代码仍通过
+      this.gd.factions 访问数据会得到 undefined，
+      必须用 Object.defineProperty 恢复原始值
+  30. mod 客户端 override 版本漂移：不仅 mod-framework/public/ 需要
+      版本漂移排查，mods/*/public/ 的 override 文件同样需要
+  31. B-type override 上游新逻辑同步：不仅要保留 mod 特有逻辑，
+      还必须同步上游新增的功能逻辑（如 _rerollStartAt.clear()），
+      版本漂移排查不仅要看行数差异，还要对比上游新增的关键语句
+
+  ── 验证方法论 ──
+
+  32. 两级验证：
+      L1 链路追踪：从数据生产→序列化→传输→反序列化→消费→UI渲染，
+      逐节点确认字段名/类型/映射关系正确，不是只读代码看逻辑自洽
+      L2 运行时测试：实际操作 UI，确认功能表现符合预期
+      **L1 通过 ≠ 功能正常**（可能有运行时行为差异），但 L1 不通过则 L2 必定失败
+      正确流程：L1 链路追踪 → 修复所有链路断点 → 交给用户 L2 实测确认
+
+  32. 端到端字段名追踪：数据生产方输出的字段名必须逐个与消费方匹配
+      例：normalizeSpGroups 输出 turnPid → choiceOverlay 必须读 turnPid
+      不能只看"有这个字段"，必须确认字段名完全一致
+
+  33. 序列化往返验证：自定义字段必须追踪完整路径
+      设置 → 序列化(freezeDiy) → 存储 → 反序列化 → UI 消费
+      每一步都必须保留该字段，任一步丢弃都会静默失效
+
+  34. 多 mod override 完整性：后加载的 override 版本必须逐功能对比原版
+      不能只看"包含了主要功能"，必须逐字段/逐逻辑确认无遗漏
+      例：20p diy.js 包含了 bonds 扩展但遗漏了 garrisonIds
+
+  35. 数据映射正确性：garrisonIds/kills_a/kills_b 等映射必须对照游戏数据
+      验证，不能凭直觉。精锐/非精锐与+1/+2的对应关系必须实测确认
+
+  ── CSS/渲染 ──
+
+  36. pointer-events 穿透设计：父元素 pointer-events: none 时，所有需要
+      交互的子元素都必须显式设置 pointer-events: auto。CSS 继承是隐式的，
+      容易遗漏。排查"按钮点击不了"时优先检查 pointer-events 链
+
+  37. override 重写函数完整性：override 文件重写上游函数时，必须逐一对比
+      函数签名和所有功能分支，不能只保留"自己用到的"模式。被 garrison/band
+      等系统调用的公共 API（rollPool/rollItemId 等）必须支持上游的所有
+      调用模式。版本漂移排查的第二层不仅要检查"mod 文件是否缺少上游新增
+      特征"，还必须检查"mod 重写的函数是否丢失了上游原有功能"
+
+  ── Service Worker / 网络健壮性 ──
+
+  38. SW fetch 必须重试：Service Worker 拦截请求后 fetch 失败直接抛异常
+      会导致整个页面生命周期内功能不可用。必须添加重试逻辑，
+      重试时用 cache: 'no-store' 绕过浏览器 HTTP 缓存
+  39. F5 vs 硬刷新 vs 重开服务器：
+      F5 = 普通刷新，SW 仍控制页面，HTTP 缓存协商可能复用异常响应
+      硬刷新(Ctrl+Shift+R) = 新 SW 生命周期，绕过所有缓存
+      重开服务器 = 新 HTTP 连接，彻底消除服务端异常状态
+      偶发问题一旦出现就持续 → 首选检查 SW 缓存和 HTTP 缓存
+  40. 二进制文件压缩风险：.bin/.wasm 等大体积二进制文件压缩收益极小
+      但增加出错风险。localhost(安全上下文)支持 brotli，LAN IP(非安全
+      上下文)只支持 gzip — 压缩方式差异可能导致"只有主机出问题"
+  41. 多层重试设计：SW 层重试 + 页面 fetch 层重试 + 场景层重试，
+      三层独立重试互不依赖。总重试次数 = 场景层×fetch层×SW层，
+      足以覆盖任何瞬态故障
+
+  ── 多轮次/多阶段逻辑 ──
+
+  42. settle 前必须检查轮次：多轮次机制的 settle（终态结算）不能直接
+      调用，必须经过轮次检查。当前轮 < 总轮次 → 推进轮次，
+      当前轮 = 总轮次 → 执行 settle
+  43. 新增 override 比修改原文件更安全：新增独立 override 文件
+      （如 unitePhase.js）比修改上游原文件（unite.js）更安全，
+      不破坏上游逻辑，上游更新时冲突更少
+  44. 分组/分池逻辑先统一决定共享属性：分组逻辑中"先统一决定共享属性、
+      再各自生成具体内容"是基本原则。每组独立调用包含随机决策的完整
+      生成函数（如 generateDraft）会导致各组结果不一致（如 family 不同）。
+      应将随机决策（weightedPick 等）提取到分组循环之外
+
+
+################################################################################
+【七】测试问题汇总
+################################################################################
+
+────────────────────────────────────────────────────────────────────────────────
+第一轮（2026-10-26）：1主机+7机器人+1朋友，全mod启用
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  克莱门莎改版盟约只显示阿戈尔            ✅       3.5
+  2  克隆投票计数位置在右上角                ✅       4.3
+  3  主机官方3D地图加载失败                  ✅       5.2
+  4  商店干员图片显示时装头像                ✅       [12]
+  5  克隆倾向盟约选择框UI缺失                ✅       1.3
+  6  联防阶段轮次UI缺失                      ✅       2.4
+  7  分组悬赏UI未显示（A-type被覆盖）        ✅       0.2
+
+────────────────────────────────────────────────────────────────────────────────
+第二轮（2026-10-26）：1主机+7机器人，克隆模式，全mod启用
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  克莱门莎改版特质面板不显示              ✅       3.6
+  2  克隆模式倾向盟约无法选择                ✅       2.6
+  3  悬赏分组异常+无时间限制+选择卡住        ✅       2.3
+  4  match:init双触发时序问题                ✅       2.5
+  5  克莱门莎改版特质不显示/叠层不触发      ✅       3.10
+  6  克莱门莎改版面板显示原版               ✅       3.11
+  7  克莱门莎非精锐显示+2层                 ✅       3.12
+  8  克莱门莎garrisonIds对应关系错误        ✅       3.13
+  9  悬赏决策界面无法选择（字段名错误）     ✅       2.9
+  10 悬赏分组人机不选/阶段卡死              ✅       2.10
+  11 悬赏界面完全不可用（双bug叠加）        ✅       2.11
+
+────────────────────────────────────────────────────────────────────────────────
+第三轮（2026-10-26）：20p 模式功能开关检查
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  禁用飞行开关不生效（后置过滤无效）    ✅       2.6
+  2  禁用飞行开关报错：involveRandom只读   ✅       2.7
+  3  禁用飞行开关报错：factions只读        ✅       2.8
+  4  sweep报告界面显示异常（CSS冲突标记）  ✅       0.6
+  5  Boss限伤开关链路验证                   ✅       2.2（已验证正常）
+
+────────────────────────────────────────────────────────────────────────────────
+第四轮（2026-10-26）：L1 链路追踪排查（从第2层开始逐层完整验证）
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  modServer.js 重复启动逻辑（main死代码） ✅       0.7
+  2  Match.js delete gd.factions 后续崩溃    ✅       0.8
+  3  teamPanel.js 版本漂移（-34行）          ✅       0.9
+  4  room.css 版本漂移（-361行）             ✅       0.1（已修复）
+  5  room.js 版本漂移（-68行）               ✅       0.1（已修复）
+  6  bandDraft.js 版本漂移                   ✅       0.1（已修复）
+  7  game.js 版本漂移                        ✅       0.1（已修复）
+  8  setupVote.js 缺少_rerollStartAt.clear  ✅       0.10
+
+  链路追踪验证结果：
+    disableFlying 链路：room.js → lobby.js → Match.js → gd.factions → setupMatchWaves ✅
+    bossHitLimit 链路：room.js → lobby.js → gamedata.js → combat.js → damage.js ✅
+    capacity 链路：room.js → lobby.js → room.capacity → 广播 ✅
+    插件路由：modServer 不拦截 /plugins/ /packs/ /cs/ /vs/ /p/ /studio/ ✅
+    versions 新功能：可选参数，不影响现有 mod 逻辑 ✅
+    modHook 触发点：上游 emit 调用路径均正确 ✅
+    clementia data reload：resetData() + reloadDataSources() 均存在 ✅
+    clone modHook：10 个 hook 注册点均正确 ✅
+    dupBand modHook：phase:bandDraft:enter hook 正确 ✅
+
+────────────────────────────────────────────────────────────────────────────────
+第五轮（2026-10-26）：全量 override 文件版本漂移复查 + 剩余链路验证
+────────────────────────────────────────────────────────────────────────────────
+
+  全量 override 文件行数对比（mod vs 上游 v0.3.2）：
+
+  ── 20p 服务端 override ──
+  Match.js        +25  ✅ 禁飞/限伤逻辑
+  phases.js         0  ✅
+  platform.js       0  ✅
+  setupVote.js     -5  ✅ 20p用createPoolGroups替代SharedPool（合理差异）
+  spDraft.js     +122  ✅ 悬赏分组逻辑
+  views.js        +13  ✅ 分组视图
+  diy.js            0  ✅
+  economy.js        0  ✅
+  lobby.js       +154  ✅ 大量扩展
+  data.js          +1  ✅ onLoadData钩子
+  spec.js           0  ✅
+  meta.js           0  ✅
+  audit.js        +13  ✅ 审计扩展
+  unite.js       +113  ✅ 20人统一逻辑
+  gamedata.js      >0  ✅ bossPoolShare
+  finalAssault.js  >0  ✅ bossPoolHp
+
+  ── 20p 客户端 override ──
+  teamPanel.js    +20  ✅ 分页逻辑（已修复）
+  lobby.js        +14  ✅ mod UI
+  room.css        +81  ✅ mod 样式
+  lobby.css       +37  ✅
+  game.css        +41  ✅
+  game-panels.css +13  ✅
+  sw.js             0  ✅
+  net.js            0  ✅
+
+  ── 20p shared override ──
+  constants.js      0  ✅
+  diy.js          +13  ✅ _flags 扩展
+  playerCapacity   mod-only  ✅ 20p 特有
+  protocol.js      +9  ✅ C2S 消息注册
+
+  ── clementia override ──
+  spec.js           0  ✅
+  shared/diy.js   +13  ✅ _flags 扩展
+  bonds.js      A-type  ✅ mod 特有
+  diy.js(UI)    A-type  ✅
+  info.js       A-type  ✅
+  diy.js(screen)+20  ✅ _flags 切换
+  diyModel.js     +9  ✅ _flags 透传
+
+  ── dupBand override ──
+  bandDraft.js      0  ✅
+
+  ── mod-framework/public ──
+  room.js        +299  ✅ mod 逻辑
+  game.js          +3  ✅ CloneAffinityPicker
+  bandDraft.js   +20  ✅ clone 投票 UI
+  room.css       +100  ✅ mod 样式
+
+  剩余链路验证：
+    g.setAffinityBond：cloneAffinityPicker → protocol C2S → Match._handle → ps.affinityBondId → views ✅
+    onLoadData 链路：clementia index.js → 上游 data.js onLoadData → loadData() 回调 ✅
+    dupBand 链路：index.js → modHook phase:bandDraft:enter → match.bandTaken=()=>false ✅
+
+  结论：L1 链路追踪全部完成，无未修复的链路断点，无版本漂移遗漏
+
+────────────────────────────────────────────────────────────────────────────────
+第六轮（2026-10-26）：20人模式实测，1主机+18机器人+1朋友
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  局内左侧组切换按钮点击不了              ✅       2.12
+  2  悬赏选项点击不了（主机+朋友都点不了）  ✅       2.13
+  3  悬赏倒计时只有10秒（应为30秒）         ✅       2.14
+  4  联防第一轮结束直接结算（应多轮推进）    ✅       2.15
+  5  组切换导航UI优化（箭头/位置/文本）     ✅       2.16
+  6  主机官方3D地图偶发加载失败              ✅       5.2
+
+  修复详情：
+
+  ── 问题1：组切换按钮 pointer-events ──
+    修改文件：mods/玩法/20p/public/css/screens/game.css
+    修改内容：添加 .team__nav { pointer-events: auto } + 基础样式
+    根因：.team 父容器 pointer-events: none 穿透，子元素未覆盖
+
+  ── 问题2：悬赏选项 turnPid 字段映射 ──
+    修改文件：mods/玩法/20p/public/js/ui/choiceOverlay.js
+    修改内容：cardPickable/armedCard 统一使用 pickSp + turnPid 映射
+    根因：使用顶层 sp（无 turnPid）而非当前组的 turn 字段
+
+  ── 问题3：悬赏倒计时统一30s ──
+    修改文件：mods/玩法/20p/overrides/server/match/match/spDraft.js
+    修改内容：分组模式下 spFirst 统一设为 30s
+    根因：分组模式仍沿用上游非分组计时参数
+
+  ── 问题4：联防多轮推进 ──
+    新增文件：mods/玩法/20p/overrides/server/match/match/unitePhase.js
+    修改内容：拦截 settle 调用，_uniteNextOrSettle 检查轮次后推进或结算
+    根因：settle 直接调用未检查轮次，nextUnitePlan 从未被调用
+
+  ── 问题5：组切换导航UI优化 ──
+    修改文件：mods/玩法/20p/public/js/ui/teamPanel.js
+              mods/玩法/20p/public/css/screens/game.css
+    修改内容：按钮改左右箭头、移到头像上方、文本加粗加深、添加背景圆角
+
+  ── 问题6：3D地图加载健壮性（三层加固）──
+    修改文件：Stronghold-Protocol/public/sw.js（核心层[16]）
+              Stronghold-Protocol/public/js/render/board3d/load.js（核心层[17]）
+              Stronghold-Protocol/server/http/files.js（核心层[18]）
+    修改内容：
+      sw.js：3次重试 + cache: 'no-store' 降级
+      load.js：fetchWithRetry(2次) + loadScenePack 3次重试
+      files.js：.bin 从 COMPRESSIBLE 移除（不再压缩二进制顶点数据）
+    根因：SW fetch 失败无重试 + 浏览器缓存异常 + .bin brotli 压缩差异

@@ -26,9 +26,6 @@ self.addEventListener('fetch', (event) => {
   try { url = new URL(request.url); } catch { return; }
   if (url.origin !== self.location.origin) return;
   if (!IMPORTED_ASSET_PATH.test(url.pathname)) return;
-  // scene.bin served as nosniff + application/octet-stream fails inside a SW's fetch().
-  // Built-in scene files are never imported; let the browser fetch them directly.
-  if (url.pathname.endsWith('.bin')) return;
   event.respondWith((async () => {
     const cache = await caches.open(IMPORTED_ASSET_CACHE);
     // The exact key: an import stores each URL without a query, so the path is the key. `ignoreSearch` would make
@@ -36,6 +33,6 @@ self.addEventListener('fetch', (event) => {
     const hit = await cache.match(url.origin + url.pathname);
     if (hit) return hit;
     // Do not cache the network response. The browser's own HTTP cache still applies to this fetch.
-    return fetch(url.href);
+    return fetch(request);
   })());
 });

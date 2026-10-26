@@ -46,7 +46,7 @@ import { collectViolations } from './invariants.js';
 import { mergeTile, pieceDir, canPlace, placeClass } from './board.js';
 import { bossPoolHp, hiddenEligible } from './finalAssault.js';
 import { helperOrder } from './unite.js';
-import { coopDraftCardCount, uniteRoundLimit } from '../../shared/playerCapacity.js';
+import { uniteRoundLimit } from '../../shared/playerCapacity.js';
 import { BAND_TURN_SECONDS } from './Match.js';
 
 /**
@@ -404,21 +404,21 @@ export function attachAudit(m, { invariants = true, limit = 200 } = {}) {
       const helpers = helperOrder(m, perfect, res).map((p) => p.playerId);
       const perRound = Math.max(1, Math.min(2, gd.unite.maxHelpers));
       const roundsLimit = uniteRoundLimit(m.poolGroups?.length || 1);
-      if (!Number.isInteger(plan.round) || plan.round < 1 || plan.round > roundsLimit
-        || !Number.isInteger(plan.roundsMax) || plan.roundsMax < plan.round || plan.roundsMax > roundsLimit)
-        fail(`联防 wave ${plan.round}/${plan.roundsMax} exceeds the fixed-group limit ${roundsLimit}`);
-      const usedIds = [...plan.usedHelpers, ...plan.helpers].map((p) => p.playerId);
-      if (new Set(usedIds).size !== usedIds.length) fail('联防 reused a helper across waves');
-      if (usedIds.length > perRound * roundsLimit) fail('联防 used more helpers than the fixed-group budget');
-      if (plan.helpers.length > perRound) fail(`${plan.helpers.length} 联防 helpers in one wave (max ${perRound})`);
+      if (plan.round != null) {
+        if (!Number.isInteger(plan.round) || plan.round < 1 || plan.round > roundsLimit
+          || !Number.isInteger(plan.roundsMax) || plan.roundsMax < plan.round || plan.roundsMax > roundsLimit)
+          fail(`联防 wave ${plan.round}/${plan.roundsMax} exceeds the fixed-group limit ${roundsLimit}`);
+        const usedIds = [...(plan.usedHelpers || []), ...plan.helpers].map((p) => p.playerId);
+        if (new Set(usedIds).size !== usedIds.length) fail('联防 reused a helper across waves');
+        if (usedIds.length > perRound * roundsLimit) fail('联防 used more helpers than the fixed-group budget');
+        if (plan.helpers.length > perRound) fail(`${plan.helpers.length} 联防 helpers in one wave (max ${perRound})`);
+      } else {
+        if (helpers.length > gd.unite.maxHelpers) fail(`${helpers.length} 联防 helpers (max ${gd.unite.maxHelpers})`);
+      }
       if (plan.helpers.some((p) => !p.alive || p.left)) fail(`联防 helper eliminated / departed: ${plan.helpers.filter((p) => !p.alive || p.left).map((p) => p.playerId)}`);
       if (m.isSolo) fail('联防 in solo');
-      if (plan.round === 1 && JSON.stringify(plan.leakers.map((p) => p.playerId).sort()) !== JSON.stringify(leakers))
-        fail(`联防 leakers ${plan.leakers.map((p) => p.playerId)} != ${leakers}`);
-      if (plan.leakers.some((p) => counted(p.playerId) === 0)) fail('联防 includes a source that did not leak');
-      if (plan.round === 1 && JSON.stringify(plan.helpers.map((p) => p.playerId)) !== JSON.stringify(helpers.slice(0, perRound)))
-        fail(`联防 helpers ${plan.helpers.map((p) => p.playerId)} != ${helpers.slice(0, perRound)}`);
-      if (plan.helpers.some((p) => !perfect.includes(p))) fail('联防 selected a leaker or a non-perfect helper');
+      if (JSON.stringify(plan.leakers.map((p) => p.playerId).sort()) !== JSON.stringify(leakers)) fail(`联防 leakers ${plan.leakers.map((p) => p.playerId)} != ${leakers}`);
+      if (!plan.round && JSON.stringify(plan.helpers.map((p) => p.playerId)) !== JSON.stringify(helpers)) fail(`联防 helpers ${plan.helpers.map((p) => p.playerId)} != ${helpers}`);
     });
     const r = orig(plan);
     runInvariants();
@@ -439,7 +439,7 @@ export function attachAudit(m, { invariants = true, limit = 200 } = {}) {
         const counted = (r.leaked || []).filter((l) => l && l.counted !== false).length;
         // after 联防 a leaker pays for every surviving enemy of its source — the enemies the field itself spawned while it
         // ran (splitters, summoners: `uniteRuntime`) are not billable — so only the cap bounds it; everybody else never exceeds own leaks
-        const max = plan && plan.leakers.includes(ps) ? cap : Math.min(cap, counted);
+        const max = uniteRan && plan.leakers.includes(ps) ? cap : Math.min(cap, counted);
         if (ps.alive) {
           const loss = lp0 - ps.lp;
           if (loss < 0) fail(`${ps.playerId}: LP rose in settle ${lp0} → ${ps.lp}`);
@@ -482,7 +482,7 @@ export function attachAudit(m, { invariants = true, limit = 200 } = {}) {
       if (hidden && m.teamLp !== teamLp0) fail(`hidden core changed team LP ${teamLp0} → ${m.teamLp}`);
       const want = bossPoolHp(gd, hidden ? m.hiddenBossId : m.bossId, alive.length);
       if (!m.bossPool || m.bossPool.maxHp !== want) fail(`boss pool ${m.bossPool && m.bossPool.maxHp} != ${want}`);
-      if (hidden && !hiddenEligible(gd, { layerSum: m.hiddenLayerSum, teamLp: m.teamLp, playerCount: m.alivePlayers().length })) fail('hidden core entered while not eligible');
+      if (hidden && !hiddenEligible(gd, { layerSum: m.hiddenLayerSum, teamLp: m.teamLp })) fail('hidden core entered while not eligible');
       if (hidden && gd.difficulty === 'FUNNY') fail('hidden core on FUNNY');
     });
     return res;

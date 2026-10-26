@@ -25,8 +25,6 @@
 // Which operators have a kit (a pick without one is not offered) is the sim's kit registry
 // (server/sim/content/kits/index.js KITTED_CHARS), passed in as `kitted`.
 
-// *** clementia-mod override: adds DIY_OP_MODS, augmentDiyRecord, _flags pass-through ***
-
 import { composeUnitRecord, unitForm, statusKey } from './standIn.js';
 import { atPotential } from './potential.js';
 
@@ -52,58 +50,14 @@ export function isDiyModule(mod) {
 }
 
 /**
- * @typedef {{ charId: string, skillIndex?: number|null, uniEquipId?: string|null, _flags?: number }} DiyPick a 自选 pick: the operator,
- *   its skill index (0-based; a prototype's is its locked one) and module (uniEquipId; null / absent / 'none' = none).
- *   _flags: character-mod option flags (e.g. clementia: bit 1 = swift/raid, bit 2 = modified/original).
- * @typedef {{ charId: string, skillIndex: number, uniEquipId: string|null, _flags?: number }} DiyLoadout a checked, complete pick
+ * @typedef {{ charId: string, skillIndex?: number|null, uniEquipId?: string|null }} DiyPick a 自选 pick: the operator,
+ *   its skill index (0-based; a prototype's is its locked one) and module (uniEquipId; null / absent / 'none' = none)
+ * @typedef {{ charId: string, skillIndex: number, uniEquipId: string|null }} DiyLoadout a checked, complete pick
  * @typedef {{ chess?: Record<string, any>|null, backups?: any, rawChess?: (id: string) => any, rawBackups?: () => any }} DiyData
  *   the game data — `{ chess, backups }` (data/chess.json, data/backups.json) or a sim DataSource (`rawChess(id)`,
  *   `rawBackups()`)
  * @typedef {Iterable<string>|((charId: string) => boolean)|null|undefined} Kitted the charIds with a kit, or a predicate
  */
-
-/**
- * Operator-specific mods for 自选 picks: per-charId bonding and garrison logic driven by _flags.
- * @type {Record<string, { bonds: (flags: number) => string[], garrisonId: (flags: number, elite: boolean) => string|null }>}
- */
-export const DIY_OP_MODS = Object.freeze({
-  char_4231_clemnt: {
-    bonds(flags) { if (!(flags & 2)) return []; return ['indomShip', (flags & 1) ? 'raidShip' : 'swiftShip']; },
-    garrisonId(flags, elite) { if (!(flags & 2)) return null; return elite ? 'garrison_clementia_kills_b' : 'garrison_clementia_kills_a'; },
-  },
-});
-
-/**
- * Append per-operator mod bonds and garrisonIds to a composed 自选 record, driven by pick._flags.
- * @param {object} rec the composed unit record (modified in place)
- * @param {DiyPick} pick
- * @param {boolean} [elite] whether the record is the elite (_b) form
- * @returns {object} the same rec
- */
-export function augmentDiyRecord(rec, pick, elite = false) {
-  if (!isObj(rec) || !isObj(pick)) return rec;
-  const mod = DIY_OP_MODS[pick.charId];
-  if (!mod) return rec;
-  const flags = pick._flags || 0;
-  const extraBonds = mod.bonds(flags) || [];
-  const gId = mod.garrisonId(flags, elite);
-  try {
-    if (gId) {
-      if (!rec.garrisonIds) rec.garrisonIds = [];
-      if (!rec.garrisonIds.includes(gId)) rec.garrisonIds.push(gId);
-    }
-    if (extraBonds.length > 0) {
-      if (!Array.isArray(rec.bonds)) rec.bonds = [];
-      for (const b of extraBonds) {
-        if (!rec.bonds.includes(b)) rec.bonds.push(b);
-      }
-    }
-  } catch (e) {
-    if (extraBonds.length > 0) rec.bonds = [...(Array.isArray(rec.bonds) ? rec.bonds : []), ...extraBonds.filter(b => !(Array.isArray(rec.bonds) ? rec.bonds : []).includes(b))];
-    if (gId) rec.garrisonIds = [...(Array.isArray(rec.garrisonIds) ? rec.garrisonIds : []), gId].filter((v, i, a) => a.indexOf(v) === i);
-  }
-  return rec;
-}
 
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -235,7 +189,7 @@ export function checkDiyPick(slotId, pick, data) {
   if (uniEquipId !== null && !mod) {
     return { error: `${charId}: no module ${uniEquipId} at stage ${slot.golden?.status?.equipLevel ?? '?'}` };
   }
-  return { ok: true, pick: { charId, skillIndex, uniEquipId, _flags: pick._flags || 0 } };
+  return { ok: true, pick: { charId, skillIndex, uniEquipId, ...(Number.isInteger(pick._flags) ? { _flags: pick._flags } : {}) } };
 }
 
 /**
@@ -252,27 +206,32 @@ export function checkDiyPick(slotId, pick, data) {
  * @returns {object|null}
  */
 export function diyRecordOf(slot, pick, data, { potential = null } = {}) {
-  const isElite = typeof slot.chessId === 'string' && slot.chessId.endsWith('_b');
-  if (!isObj(slot) || !slot.isDiy || typeof slot.chessId !== 'string') {
-    return null;
-  }
+  if (!isObj(slot) || !slot.isDiy || typeof slot.chessId !== 'string') return null;
   const c = checkDiyPick(slot.chessId, pick, data);
-  if (!('ok' in c)) {
-    return null;
-  }
+  if (!('ok' in c)) return null;
   const { charId, skillIndex, uniEquipId } = c.pick;
+  const flags = Number.isInteger(pick._flags) ? pick._flags : 0;
   const backups = backupsOf(data);
   const unit = backups?.units?.[charId] ?? null;
   const proto = isPrototypePick(data, slot.tier, charId);
   const form = unitForm(backups, charId, slot.status);
-  const rec = composeUnitRecord(slot, unit, proto ? form : atPotential(form, potential),
-    { skillIndex, moduleId: uniEquipId, bonds: diyOf(data)?.operators?.[charId]?.bonds ?? null });
-  if (!rec || !rec.skill) {
-    return null;
+  let bonds = diyOf(data)?.operators?.[charId]?.bonds ?? null;
+  if (charId === 'char_4231_clemnt' && (flags & 2)) {
+    const base = Array.isArray(bonds) ? [...bonds] : ['egirShip'];
+    if (!base.includes('indomShip')) base.push('indomShip');
+    if ((flags & 1) && !base.includes('raidShip')) base.push('raidShip');
+    if (!(flags & 1) && !base.includes('swiftShip')) base.push('swiftShip');
+    bonds = base;
   }
+  const rec = composeUnitRecord(slot, unit, proto ? form : atPotential(form, potential),
+    { skillIndex, moduleId: uniEquipId, bonds });
+  if (!rec || !rec.skill) return null;
   rec.diyFor = slot.baseId ?? slot.chessId;
   if (proto) rec.diyProto = true;
-  augmentDiyRecord(rec, c.pick, typeof slot.chessId === 'string' && slot.chessId.endsWith('_b'));
+  if (charId === 'char_4231_clemnt' && (flags & 2)) {
+    const isElite = Number.isInteger(slot.status?.equipLevel) && slot.status.equipLevel > 0;
+    rec.garrisonIds = [isElite ? 'garrison_clementia_kills_b' : 'garrison_clementia_kills_a'];
+  }
   return rec;
 }
 
@@ -287,8 +246,7 @@ export function diyRecordOf(slot, pick, data, { potential = null } = {}) {
 export function diyRecord(slotId, pick, { elite = false, data, potential = null } = { data: null }) {
   const slot = diySlot(slotId, data);
   if (!slot) return null;
-  const chosen = elite || slot.elite ? slot.golden : slot.normal;
-  return diyRecordOf(chosen, pick, data, { potential });
+  return diyRecordOf(elite || slot.elite ? slot.golden : slot.normal, pick, data, { potential });
 }
 
 /**
@@ -325,8 +283,7 @@ export function validateDiyPicks(picks, { data, kitted = null } = { data: null }
     const c = checkDiyPick(slotId, pick, data);
     if (!('ok' in c)) return { error: 'BAD_TARGET', detail: c.error };
     const { charId } = c.pick;
-    const kitResult = ok(charId);
-    if (!kitResult) return { error: 'BAD_TARGET', detail: `${charId} has no kit yet` };
+    if (!ok(charId)) return { error: 'BAD_TARGET', detail: `${charId} has no kit yet` };
     const mod = c.pick.uniEquipId ? diyModuleOf(slotId, charId, c.pick.uniEquipId, data) : null;
     if (mod && !isDiyModule(mod)) return { error: 'BAD_TARGET', detail: `${charId}: ${c.pick.uniEquipId} is a module of another game mode (${mod.typeName}, ${/^RA-/.test(mod.typeName || '') ? '生息演算' : '集成战略'})` };
     const tier = diy.slots[slotId].tier;

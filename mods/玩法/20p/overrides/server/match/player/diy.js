@@ -170,9 +170,7 @@ export class PlayerDiy {
       if (!slot || !normal || !golden) continue;
       records.set(slot.baseId, Object.freeze(normal));
       records.set(slot.goldenId, Object.freeze(golden));
-      const entry = { charId: pick.charId, skillIndex: pick.skillIndex, uniEquipId: pick.uniEquipId ?? null };
-      if (Number.isInteger(pick._flags)) entry._flags = pick._flags;
-      kept[slot.baseId] = Object.freeze(entry);
+      kept[slot.baseId] = Object.freeze({ charId: pick.charId, skillIndex: pick.skillIndex, uniEquipId: pick.uniEquipId ?? null, ...(Number.isInteger(pick._flags) ? { _flags: pick._flags } : {}) });
     }
     this.diy = Object.freeze(kept);
     this._diyRecords = records;
@@ -211,7 +209,7 @@ export class PlayerDiy {
 
   /** The copy accounting of base chess `baseId` for this player: its own stock for a slotted DIY slot, else the shared pool. */
   poolOf(baseId) {
-    return this.diyStock && this.diyStock.has(baseId) ? this.diyStock : this.pool;
+    return this.diyStock && this.diyStock.has(baseId) ? this.diyStock : this.m.pool;
   }
 
   /**
