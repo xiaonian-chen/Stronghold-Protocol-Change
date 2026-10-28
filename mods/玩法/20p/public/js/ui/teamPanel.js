@@ -28,6 +28,7 @@ import { MissTag, uniteRemaining } from './hud.js';
 import { localAsset } from '../data.js';
 import { t } from '../../../shared/i18n.js';
 import { poolGroupSizes } from '../../../shared/playerCapacity.js';
+import { act } from './gameActions.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 
@@ -176,6 +177,7 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
       <span class="team__nav-info">${page + 1}/${totalPages}</span>
       <button type="button" class="team__nav-btn" onClick=${navNext} aria-label=${t('下一组')}>▶</button>
     </div>` : null}
+    <${VotePanel} pub=${pub} myId=${myId} />
     ${pagePlayers.map((p) => {
       const self = p.playerId === myId;
       const status = p.alive === false ? 'dead' : p.status;
@@ -222,4 +224,54 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
       </div>`;
     })}
   </aside>`;
+}
+
+/**
+ * 20p: the two majority votes (server/match/match/votes.js) — 休整期加时 in PREP (+30 s / +60 s) and 联防跳过 in UNITE.
+ * Any seated human may propose; the proposer counts as one agreeing vote and half of the humans passes it. The server
+ * publishes the open vote on m.public (prepExtendVote / uniteSkipVote) only while the round / 联防 it was opened for is
+ * the current one, so a stale vote can never show here. `prepExtendDone` hides the buttons once this prep took one.
+ * @param {{ pub: any, myId: string }} props
+ */
+function VotePanel({ pub, myId }) {
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  if (!pub || (pub.phase !== PHASE.PREP && pub.phase !== PHASE.UNITE)) return null;
+  const me = (pub.players || []).find((p) => p.playerId === myId);
+  if (!me || me.isBot || me.status === 'left') return null;
+  const prep = pub.phase === PHASE.PREP;
+  const vote = prep ? pub.prepExtendVote : pub.uniteSkipVote;
+  if (!vote && prep && pub.prepExtendDone) return null;
+  const send = (fn) => {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    Promise.resolve().then(fn).catch(() => {}).finally(() => { pending.current = false; setBusy(false); });
+  };
+  const answer = (agree) => send(() => act(prep ? 'g.prepExtendVote' : 'g.uniteSkipVote', { voteId: vote.id, agree }));
+  const total = vote?.voters?.length || 0;
+  const agreed = vote?.agreed?.length || 0;
+  return html`<div class="team__vote">
+    ${vote ? html`
+      <div class="team__vote-head">
+        <span class="team__vote-title">${prep ? t('休整期加时投票 +{s}s', { s: vote.seconds }) : t('联防跳过投票')}</span>
+        <span class="team__vote-count">${agreed}/${total}</span>
+      </div>
+      <div class="team__vote-btns">
+        <button type="button" class="btn btn--primary btn--sm" disabled=${busy} onClick=${() => answer(true)}><span class="btn__label">${t('同意')}</span></button>
+        <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => answer(false)}><span class="btn__label">${t('拒绝')}</span></button>
+      </div>
+      <div class="team__vote-hint">${t('半数玩家同意即生效')}</div>
+    ` : html`
+      <div class="team__vote-btns">
+        ${prep ? html`
+          <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => send(() => act('g.prepExtend', { seconds: 30 }))}><span class="btn__label">${t('加时 +30s')}</span></button>
+          <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => send(() => act('g.prepExtend', { seconds: 60 }))}><span class="btn__label">${t('加时 +60s')}</span></button>
+        ` : html`
+          <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => send(() => act('g.uniteSkip'))}><span class="btn__label">${t('联防跳过投票')}</span></button>
+        `}
+      </div>
+      <div class="team__vote-hint">${prep ? t('半数玩家同意即延长本次休整期') : t('半数玩家同意即立刻结算：未消灭的敌人照常扣血')}</div>
+    `}
+  </div>`;
 }

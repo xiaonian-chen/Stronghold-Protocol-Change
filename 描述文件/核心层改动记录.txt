@@ -2,7 +2,7 @@
 # 范围：Stronghold-Protocol/ 内相对上游 v0.3.2 的改动
 # 组织：按上游更新指南五层递进归类
 # 用途：上游更新时按层逐步检查，每层确认对应改动是否保留/需合并
-# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复）
+# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票 — 纯 override，无核心层改动）
 
 
 ================================================================================
@@ -204,15 +204,16 @@
     scripts/launch.mjs — 20p-loader 入口
     server/lobby.js    — businessHook + dupBand
 
-  Override 文件（mods/玩法/20p/overrides/，28 个）：
+  Override 文件（mods/玩法/20p/overrides/，24 个）：
     server/lobby.js                          server/data.js
     server/match/Match.js                    server/match/audit.js
     server/match/finalAssault.js             server/match/gamedata.js
     server/match/pool.js                     server/match/unite.js
-    server/match/match/bossRounds.js → platform.js
-    server/match/match/phases.js             server/match/match/setupVote.js
-    server/match/match/spDraft.js            server/match/match/views.js
+    server/match/match/phases.js             server/match/match/platform.js
+    server/match/match/setupVote.js          server/match/match/spDraft.js
+    server/match/match/views.js
     server/match/match/unitePhase.js         ← 2026-10-26 新增：联防多轮推进
+    server/match/match/votes.js              ← 2026-10-28 新增：两个半数投票
     server/match/player/diy.js               server/match/player/economy.js
     server/sim/spec.js                       server/sim/content/bands/meta.js
     server/sim/garrisons/battle.js
@@ -223,12 +224,18 @@
     node mod-framework/scripts/gen-patches.js 20p
     node mod-framework/scripts/check-patches.js 20p
 
+  指纹状态：✅ 2026-10-28 复核 22 个文件全部 [OK]
+    （votes.js 上游无同名文件，gen-patches 会 [SKIP]，不计入指纹）
+
   验证清单：
     □ 创建 20p 房间，poolGroups 分组正确
     □ 首领限伤开关正常
     □ 禁用飞行开关正常（随机 3 种敌人不含飞行类）
     □ 联防轮次显示 "联防 X/Y"
     □ 联防多轮推进正常（第一轮结束→第二轮→…→结算，非第一轮直接结算）✅ 2026-10-26
+    □ 休整期加时投票：按钮出现、半数通过后倒计时 +30/+60s、每期只能加一次 ✅ 2026-10-28
+    □ 联防跳过投票：半数通过后按在场敌人数扣血、场上敌人清除、不发放资金/击杀、
+      结算后正常进入下一轮休整期（不重复结算、不再开一轮联防）✅ 2026-10-28
     □ 6 人以上悬赏选择分组 UI 正常（A组/B组按钮、进度、倒计时）
     □ 各分组玩家进悬赏界面默认显示自己分组
     □ 分组悬赏人机正常选择、超时正常触发

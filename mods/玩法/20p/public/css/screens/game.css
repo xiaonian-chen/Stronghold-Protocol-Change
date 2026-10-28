@@ -962,6 +962,14 @@
 .team__nav-btn { pointer-events: auto; min-width: .26rem; min-height: .22rem; background: rgba(255, 255, 255, .08); border: 1px solid var(--line-2); border-radius: .04rem; color: var(--text-lo); font-size: calc(.13 * var(--t)); cursor: pointer; line-height: 1; }
 .team__nav-btn:hover, .team__nav-btn:focus-visible { border-color: var(--mint-700); color: var(--mint-400); background: rgba(23, 249, 183, .1); }
 .team__nav-info { font-size: calc(.14 * var(--t)); color: var(--text); font-weight: 600; min-width: .4rem; text-align: center; letter-spacing: .04em; }
+/* 20p: the two majority votes (休整期加时 / 联防跳过) — the panel sits under the group nav, above the rows */
+.team__vote { pointer-events: auto; display: flex; flex-direction: column; gap: .04rem; padding: .06rem .08rem; margin-bottom: .02rem; background: rgba(0, 0, 0, .45); border: 1px solid var(--line-2); border-radius: .06rem; }
+.team__vote-head { display: flex; align-items: center; justify-content: space-between; gap: .08rem; }
+.team__vote-title { font-size: calc(.13 * var(--t)); color: var(--text); font-weight: 600; }
+.team__vote-count { font-size: calc(.13 * var(--t)); color: var(--mint-400); font-weight: 700; letter-spacing: .04em; }
+.team__vote-btns { display: flex; flex-wrap: wrap; gap: .04rem; }
+.team__vote-btns .btn { flex: 1 1 auto; min-height: .22rem; }
+.team__vote-hint { font-size: calc(.11 * var(--t)); color: var(--text-lo); line-height: 1.35; }
 @media (max-width: 767px) { .set-keys__list { grid-template-columns: minmax(0, 1fr); } }
 @media (max-height: 600px) and (pointer: coarse), (max-height: 600px) and (any-pointer: coarse) {
   .set-key { height: max(.38rem, 30px); }

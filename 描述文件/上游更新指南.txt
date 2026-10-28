@@ -1,6 +1,6 @@
 ===========================================================
   上游更新指南 — Git 版（五层完整流程）
-  最后更新：2026-10-27
+  最后更新：2026-10-28
 ===========================================================
 
 描述文件协作关系（四文件分工）：
@@ -500,13 +500,13 @@
     v0.3.3 实战：仅 shared/constants.js 在交集中（20p），
     其余 mod 交集为空 → clementia/dupBand/clone 全部跳过。
 
-  ═══ Mod A：20p（27 个 overrides）═══
+  ═══ Mod A：20p（24 个 overrides）═══
 
     修改的核心文件（已在 Git 中，第一层处理）：
       scripts/launch.mjs    — 20p-loader 入口
       server/lobby.js       — businessHook、setGameMode 加 'clone'
 
-    Override 文件（mods/玩法/20p/overrides/，共 27 个）：
+    Override 文件（mods/玩法/20p/overrides/，共 24 个）：
       server/lobby.js                          server/data.js
       server/match/Match.js                    server/match/audit.js
       server/match/finalAssault.js             server/match/gamedata.js
@@ -514,11 +514,17 @@
       server/match/match/platform.js           server/match/match/phases.js
       server/match/match/setupVote.js          server/match/match/spDraft.js
       server/match/match/views.js
+      server/match/match/unitePhase.js         ← 20p 自有：联防多轮推进
+      server/match/match/votes.js              ← 20p 自有：两个半数投票（上游无同名文件）
       server/match/player/diy.js               server/match/player/economy.js
       server/sim/spec.js                       server/sim/content/bands/meta.js
       server/sim/garrisons/battle.js
       shared/constants.js                      shared/diy.js
       shared/playerCapacity.js                 shared/protocol.js
+
+    ★ 关于 votes.js：上游没有同名文件，gen-patches 会打印 [SKIP] 并不把它写入指纹，
+      check-patches 也不会报 [MISSING]——属正常状态，不可据此删除该文件。
+      （unitePhase.js 上游有同名文件，正常计入指纹。）
 
     适配步骤：
       cd d:\yjw\Stronghold-Protocol-v0.3.2
@@ -537,6 +543,11 @@
       □ 联防随机化正常
       □ 移除原版模式正常（只剩 20p 可选）
       □ 6 人以上悬赏选择分组 UI 正常
+      □ 休整期加时投票：队伍面板出现「加时 +30s」「加时 +60s」，
+        半数同意后倒计时延长，同一休整期不可重复加时
+      □ 联防跳过投票：队伍面板出现「联防跳过投票」，半数同意后按在场敌人数扣血、
+        场上敌人清除、不给联防玩家发放资金/击杀，随后正常进入下一轮休整期
+      □ 两个投票的拒绝不会一票否决（仅当剩余可同意席位不足半数才结束）
       □ 各分组玩家进悬赏界面默认显示自己分组
       □ 分组悬赏人机正常选择、超时正常触发
       □ sweep 报告界面显示正常

@@ -8,6 +8,7 @@ import { C2S } from '../../../shared/protocol.js';
 import { PHASE, ERR } from '../../../shared/constants.js';
 import { syntheticResult } from '../fields.js';
 import { FLOW_TICKER_PRIORITY, OK, fail } from './common.js';
+import { VOTE_TYPES } from './votes.js';
 import { msg } from '../../../shared/i18n.js';
 import { ruleOption } from '../../../shared/plugins/rules.js';
 import { modHook } from '../../../../mod-framework/modHook.js';
@@ -65,7 +66,7 @@ export class MatchPlatform {
     if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string' || !GAME_TYPES.has(msg.t)) return fail(ERR.BAD_MSG);
     let res;
     try {
-      res = this._handle(ps, msg);
+      res = VOTE_TYPES.has(msg.t) ? this._handle20pVote(ps, msg) : this._handle(ps, msg);
     } catch (e) {
       this.reportError(`handle ${msg.t}`, e);
       res = fail(ERR.INTERNAL);

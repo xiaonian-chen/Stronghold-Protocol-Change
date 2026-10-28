@@ -91,12 +91,18 @@ export class MatchUnite {
   }
 
   _uniteNextOrSettle(plan, res) {
+    // a 联防跳过 (votes.js _applyUniteSkip) may have settled this plan already: never advance or settle it twice
+    if (this.phase !== PHASE.UNITE || this.unitePlan !== plan) return;
     const next = nextUnitePlan(plan, res);
     if (next) {
       this.unitePlan = next;
-      this.later(this.scaled(DELAYS.COMBAT_END), () => this.startUnite(next));
+      this.later(this.scaled(DELAYS.COMBAT_END), () => {
+        if (this.phase === PHASE.UNITE && this.unitePlan === next) this.startUnite(next);
+      });
     } else {
-      this.later(this.scaled(DELAYS.COMBAT_END), () => this.settle(plan, res));
+      this.later(this.scaled(DELAYS.COMBAT_END), () => {
+        if (this.phase === PHASE.UNITE && this.unitePlan === plan) this.settle(plan, res);
+      });
     }
   }
 

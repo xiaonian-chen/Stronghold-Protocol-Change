@@ -1,6 +1,6 @@
 # 功能适配经验 — 问题排查与解决方案汇总
 # 组织：按功能模块归类，同模块不同问题归在一起
-# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复）
+# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票）
 
 
 ################################################################################
@@ -295,6 +295,52 @@
           4) 添加背景、圆角、hover 效果
     经验：分组导航是高频操作控件，必须醒目易用。上下箭头语义
           不如左右（翻页习惯），位置在上方更符合视觉层级
+
+  ── 2.17 新增投票 C2S 意图被上游 intents.js 拦截 ──
+    现象：客户端点击「加时 +30s」/「联防跳过投票」无反应（服务器回 BAD_MSG 或 ignored）
+    根因：上游 intents.js 用固定的 msg.t 分发表，未知类型直接丢弃；
+          仅在 protocol.js 注册 C2S 消息不足以让请求到达业务代码
+    修复：1) shared/protocol.js 注册四条消息的 schema（g.prepExtend / g.prepExtendVote /
+             g.uniteSkip / g.uniteSkipVote）
+          2) platform.js 在交给 intents.js 之前先按 VOTE_TYPES 前置路由到
+             _handle20pVote()（overrides 无法改上游分发顺序，只能前置拦截）
+    经验：mod 新增的玩家意图必须"协议注册 + 前置路由"成对出现；
+          只做其一会表现为"请求被静默丢弃"，且没有任何报错日志
+
+  ── 2.18 20 人投票照搬全票制导致"一票否决" ──
+    现象：加时/跳过投票只要有人点拒绝就立刻结束，20 人房几乎永远通不过
+    根因：直接复用 setupVote.js 的全票通过模型（任一票反对即失败）
+    修复：_voteNeed(vote) = ceil(在座在线人数 / 2)（发起人自动计为同意）；
+          拒绝只把该席位加入 declined 并从 agreed 移除，
+          仅当 agreed + 未表态席位 < 半数时才 _endVote 结束投票
+    经验：大房间投票要区分"通过阈值"和"终止条件"。
+          半数制下拒绝不是终止信号，而是减少可达成席位的计数，
+          终止条件必须是"剩余可同意席位不足以达到阈值"
+          （6 人房：1 票同意 + 3 票拒绝仍可继续，剩 2 席刚好够半数）
+
+  ── 2.19 联防跳过投票通过后重复结算 / 二次进入联防 ──
+    现象：跳过投票通过后，同一轮联防被结算两次，或跳过之后又开了一轮联防
+    根因：跳过时先 runner.stop() 再 later(0) 调用 settle()，
+          但 FieldRunner 在 instant 模式下已排队的 _runInstant 回调仍会执行，
+          _runInstant 末尾的 _checkDone() 会触发 onDone → _uniteNextOrSettle，
+          此时 phase 已推进到 SETTLE，迟到的回调仍按旧逻辑再推进/再结算一次
+    修复：1) _applyUniteSkip 中 plan.skipRemaining = true（nextUnitePlan 返回 null）
+          2) unitePhase.js 的 _uniteNextOrSettle 开头增加
+             "phase === UNITE 且 plan === unitePlan" 双重匹配检查，不匹配直接 return
+    经验：在"阶段推进"链路上做外部强制结束时，必须同时处理
+          已排队但未执行的定时器回调（later(0) / instant 模式回调）。
+          幂等检查要放在回调入口，而不是只在主动调用方加锁
+
+  ── 2.20 联防跳过扣血数量与实际在场敌人不一致 ──
+    现象：跳过时扣血数量偏多（把已经重新入场过的敌人又扣了一次）
+    根因：结算用 uniteSurvivors(plan, res) 统计漏怪，它会把
+          plan.notReentered 里"无法重新入场"的敌人再加一遍；
+          而跳过要扣的是"此刻仍站在场上的敌人"（_uniteLeft）
+    修复：合成结果 res 只带 perPlayer[pid].leaked（按 _uniteLeft 的占位漏怪构造），
+          并传入 { ...plan, notReentered: new Map() } 给 settle，避免重复计数
+    经验：同一个"漏怪数"在两处有不同口径——"本场总共漏了多少"（结算统计）
+          和"此刻还剩几个"（跳过扣血）。复用结算函数时必须显式清空
+          notReentered，否则会双重计数
 
 
 ################################################################################

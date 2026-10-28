@@ -1,7 +1,7 @@
 # 非上游文件功能记录 — 记录所有非上游文件基于上游添加的内容和实现的功能
 # 用途：记录所有非上游文件基于上游添加的内容和实现的功能
 #       以防更新上游时遗漏这部分功能
-# 最后更新：2026-10-27（rollPool 完整性修复 + 分组 family 一致性修复 + 局内界面盘点）
+# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票）
 
 
 ================================================================================
@@ -121,7 +121,7 @@
       · match:bossHp — 首领 HP 限伤【20p】
       · match:duckReplace — 鸭替换（克隆模式核心机制）【clone】
 
-  ── B-type override 文件（28 个）──
+  ── B-type override 文件（24 个）──
 
     mods/玩法/20p/overrides/server/lobby.js
       基于上游添加：20p 房间创建逻辑【20p】
@@ -137,7 +137,29 @@
       基于上游添加：_20pActive 标志 + match:init 事件触发 + 联防轮次逻辑
                       + 禁用飞行类敌人（Object.defineProperty 遮蔽 factions getter）【20p】
                       + Boss 限伤开关【20p】
+                      + Match20pVotes 方法容器挂载（votes.js 的两个投票方法）【20p】
       更新上游时注意：必须保留 _20pActive + 禁用飞行 + Boss 限伤逻辑
+                      + Match20pVotes 挂载（休整期加时 / 联防跳过投票）
+
+    mods/玩法/20p/overrides/server/match/match/votes.js（⚠ 新增，上游无此文件）
+      功能：20p 两个半数通过投票（2026-10-28 新增）
+      机制：导出 Match20pVotes 类，由 Match.js 挂到 Match 原型链上，方法包含
+            · _handle20pVote(ps, msg) — 四条 C2S 意图的分发入口（platform.js 调用）
+            · requestPrepExtend / votePrepExtend — 休整期加时（+30s / +60s）
+            · requestUniteSkip / voteUniteSkip — 联防跳过
+            · _voteSeats / _voteNeed / _vote / _endVote / _expireVote — 投票管道
+            · _applyPrepExtend / _applyUniteSkip — 通过后的生效逻辑
+      关键规则：
+            · 半数阈值 = ceil(在座且在线的人数 / 2)，发起人自动计为同意
+            · 拒绝只剔除该席位，剩余可同意席位不足半数时才结束投票
+            · 投票窗口 20s（scaled），超时自动取消
+            · 加时每个休整期一次（_prepExtendRound），无 deadline 的休整期拒绝
+            · 跳过按 _uniteLeft 统计的在场敌人数扣血（与结算同一上限），
+              场上敌人直接清除、不给任何资金/击杀，随后走原 settle()，
+              合成结果 res 只带 perPlayer[pid].leaked，不带 coins/killed
+      更新上游时注意：如果上游新增同名 votes.js 需合并；否则保留此文件
+                      （依赖 Match 的 humans/_uniteLeft/_stopClientCombat/
+                        setDeadline/prepDeadline/settle/later/cancel 等公开方法）
 
     mods/玩法/20p/overrides/server/match/match/spDraft.js
       基于上游添加：poolGroups 分组悬赏逻辑 + deadline 超时 + 分组轮转
@@ -152,25 +174,37 @@
                       + rollPool 三种调用模式完整性（不可再截断为仅 items）
                       + 分组 family 统一决定（不可每组独立 generateDraft）
 
-    mods/玩法/20p/overrides/server/match/match/unitePhase.js（⚠ 新增，上游无此文件）
+    mods/玩法/20p/overrides/server/match/match/unitePhase.js
       功能：联防多轮推进（2026-10-26 新增）
       机制：拦截 settle 调用，实现 _uniteNextOrSettle：
             当前轮 < 总轮次 → 重置倒计时 + 推进轮次
             当前轮 = 总轮次 → 执行原 settle
-      基于上游添加：整个文件为新增，上游无 unitePhase.js
-      更新上游时注意：如果上游新增同名文件需合并；否则保留此文件
+      基于上游添加：多轮推进逻辑（上游同名文件已存在，属 B-type 覆盖）
+                      + _uniteNextOrSettle 开头的 phase / unitePlan 匹配检查
+                        （2026-10-28：联防跳过已把 phase 推进到 SETTLE 后，
+                         迟到的 onDone 回调不得再触发一次结算或下一轮联防）
+      更新上游时注意：必须保留多轮推进 + 开头 phase/plan 匹配检查
+                      （否则跳过投票后会重复结算 / 二次进入联防）
 
     mods/玩法/20p/overrides/server/match/match/phases.js
       基于上游添加：联防多轮次支持（roundsMax）
 
     mods/玩法/20p/overrides/server/match/match/views.js
       基于上游添加：联防轮次输出（round/roundsMax）+ 每组 turnDeadline 序列化
+                      + prepExtendVote / prepExtendDone 输出【20p】
+                      + uniteSkipVote 输出【20p】
+                      + 两个投票的 voters/agreed/declined/endsAt/seconds/proposerId 字段
+      更新上游时注意：必须保留投票视图字段（客户端 VotePanel 依赖 agreed/declined/voters）
+                      + 投票仅在"仍在当前轮/当前 plan"时才输出（过期投票自动消失）
 
     mods/玩法/20p/overrides/server/match/match/setupVote.js
       基于上游添加：20p 投票设置
 
     mods/玩法/20p/overrides/server/match/match/platform.js
       基于上游添加：20p 平台逻辑
+                      + VOTE_TYPES 前置路由：四条投票意图先交给 _handle20pVote，
+                        不进入上游 intents.js 分发（避免与上游意图表冲突）
+      更新上游时注意：必须保留投票意图前置路由
 
     mods/玩法/20p/overrides/server/match/player/economy.js
       基于上游添加：20 人商店槽位扩展（_effectiveShopSlots）
@@ -205,9 +239,10 @@
     mods/玩法/20p/overrides/shared/protocol.js
       基于上游添加：
         · C2S 'g.setAffinityBond' 消息注册【clone】
+        · C2S 'g.prepExtend' / 'g.prepExtendVote' / 'g.uniteSkip' / 'g.uniteSkipVote' 注册【20p】
         · setGameMode 白名单含 'dupBand'/'clone'【dupBand/clone】
         · ROOM_CAPACITIES 导入【20p】
-      更新上游时注意：必须保留 C2S 注册和白名单扩展
+      更新上游时注意：必须保留 C2S 注册（含四条投票消息）和白名单扩展
 
     mods/玩法/20p/overrides/shared/constants.js
       基于上游添加：ROOM_CAPACITIES / DEFAULT_SEATS 导出【20p】
@@ -229,10 +264,18 @@
       更新上游时注意：字段名必须用 turnPid（非 turn），必须使用 pickSp
 
     mods/玩法/20p/public/js/ui/teamPanel.js
-      功能：分组队伍面板导航
+      功能：分组队伍面板导航 + 投票面板
       基于上游添加：组切换导航（◀/▶ 左右箭头、分组 X/X 文本）
                     + 导航移到头像上方 + pointer-events: auto（2026-10-26 优化）
+                    + VotePanel 组件（2026-10-28）：
+                      · 休整期显示「加时 +30s」「加时 +60s」发起按钮
+                      · 联防阶段显示「联防跳过投票」发起按钮
+                      · 投票进行中显示标题（含秒数/发起人）、同意计数 X/Y、
+                        「同意」「拒绝」按钮（已投过的按钮禁用）
+                      · 通过 act('g.prepExtend'|'g.prepExtendVote'|'g.uniteSkip'|'g.uniteSkipVote') 发送
       更新上游时注意：必须保留 pointer-events: auto + 左右箭头 + 上方位置
+                      + VotePanel（依赖 pub.prepExtendVote / pub.prepExtendDone /
+                        pub.uniteSkipVote 字段与 myId）
 
     mods/玩法/20p/public/js/ui/gameLogic/draft.js
       功能：分组数据解析（normalizeSpGroups）
@@ -246,6 +289,9 @@
       功能：20p 游戏样式
       基于上游添加：.team__nav 样式（背景/圆角/hover/pointer-events: auto）
                     + 分组 X/X 文本加粗加深（2026-10-26 优化）
+                    + .team__vote 系列样式（2026-10-28）：
+                      .team__vote / -head / -title / -count / -btns / -hint
+                      （半透明底 + var(--line-2) 描边 + .btn 自适应高度）
 
     mods/玩法/20p/public/js/screens/lobby.js
       功能：20p 大厅界面
@@ -432,9 +478,11 @@
 ================================================================================
 
   ── 20p mod（mods/玩法/20p/patches/fingerprint.json）──
-    已收录：21 个 B-type override 文件
-    ⚠ 缺失：server/match/match/unitePhase.js（2026-10-26 新增）
-    操作：需重新运行 gen-patches.js 生成指纹
+    状态：✅ 有效（2026-10-28 复核，22 个文件全部 [OK]，0 changed / 0 missing）
+    已收录：22 个 B-type override 文件（含 unitePhase.js）
+    说明：votes.js 上游无同名文件，gen-patches 会 [SKIP]（不计入指纹），
+          check-patches 不会报 [MISSING]，因此无需重新生成
+    结论：仅在"上游新增了同名文件"或"上游文件内容变化"时才需重跑 gen-patches.js
 
   ── clementia mod（mods/扩展角色/clementia/patches/fingerprint.json）──
     已收录：2 个（server/sim/spec.js, shared/diy.js）
@@ -469,7 +517,12 @@
   □ shared/diy.js — clementia garrisonIds（精锐/非精锐区分）+ augmentDiyRecord
   □ shared/constants.js — ROOM_CAPACITIES / DEFAULT_SEATS 导出
   □ spDraft.js — poolGroups 分组 + 独立 _turnToken/_turnTimer + deadline 超时 + 30s 计时
-  □ unitePhase.js — 联防多轮推进（_uniteNextOrSettle）⚠ 新增
+  □ unitePhase.js — 联防多轮推进（_uniteNextOrSettle）+ 开头 phase/plan 匹配检查
+  □ votes.js — 休整期加时投票 + 联防跳过投票（Match20pVotes）⚠ 新增
+  □ views.js — prepExtendVote / prepExtendDone / uniteSkipVote 输出（含 declined）
+  □ platform.js — VOTE_TYPES 四条投票意图前置路由
+  □ protocol.js — 四条投票 C2S 消息注册
+  □ Match.js — Match20pVotes 挂载
   □ economy.js — _effectiveShopSlots 扩展
   □ Match.js — _20pActive + match:init + 禁用飞行 + Boss 限伤
   □ gamedata.js — bossHitLimit 传递
@@ -478,8 +531,8 @@
   □ lobby.js — freezeDiy 保留 _flags
   □ battle.js — clementia_global_kills 安装器
   □ meta.js — duckReplace hook
-  □ A-type 客户端文件：choiceOverlay.js（turnPid + pickSp）+ teamPanel.js（◀▶ + 上方位置）
-  □ A-type 客户端文件：draft.js + game-panels.css + game.css（.team__nav 样式）
+  □ A-type 客户端文件：choiceOverlay.js（turnPid + pickSp）+ teamPanel.js（◀▶ + 上方位置 + VotePanel）
+  □ A-type 客户端文件：draft.js + game-panels.css + game.css（.team__nav / .team__vote 样式）
   □ A-type 客户端文件：lobby.js（SweepReport + 禁用飞行/Boss限伤开关 UI）
 
   ── clementia mod ──

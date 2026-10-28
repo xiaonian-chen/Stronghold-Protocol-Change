@@ -91,6 +91,26 @@ export class MatchViews {
         voters: this.setupVote.voters.slice(),
         agreed: [...this.setupVote.agreed],
       } : null,
+      // 20p: the two majority votes (votes.js). Published only while the round / plan they were opened for is the
+      // current one, so a stale vote never shows up in a later phase.
+      prepExtendVote: this.phase === PHASE.PREP && this.prepExtendVote && this.prepExtendVote.round === this.round ? {
+        id: this.prepExtendVote.id,
+        seconds: this.prepExtendVote.seconds,
+        proposerId: this.prepExtendVote.proposerId,
+        voters: this.prepExtendVote.voters.slice(),
+        agreed: [...this.prepExtendVote.agreed],
+        declined: [...this.prepExtendVote.declined],
+        endsAt: this.prepExtendVote.endsAt,
+      } : null,
+      prepExtendDone: this.phase === PHASE.PREP && this._prepExtendRound === this.round,
+      uniteSkipVote: this.phase === PHASE.UNITE && this.uniteSkipVote && this.uniteSkipVote.plan === this.unitePlan ? {
+        id: this.uniteSkipVote.id,
+        proposerId: this.uniteSkipVote.proposerId,
+        voters: this.uniteSkipVote.voters.slice(),
+        agreed: [...this.uniteSkipVote.agreed],
+        declined: [...this.uniteSkipVote.declined],
+        endsAt: this.uniteSkipVote.endsAt,
+      } : null,
       factions: this.factions.slice(),
       disabledBonds: [...new Set([...this.disabledBonds, ...this.staticInactiveBonds])].sort(),
       drawnDisabledBonds: this.disabledBonds.slice(),
