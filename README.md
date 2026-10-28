@@ -1,6 +1,6 @@
-# Stronghold Protocol Change v1.0
+# Stronghold Protocol Change v1.2
 
-基于上游 [Stronghold Protocol v0.3.1](https://github.com/sganggs/Stronghold-Protocol/releases) 的集成改版，在保留上游核心玩法完整的前提下，新增多人扩展玩法、角色增强、游戏模式等功能。
+基于上游 [Stronghold Protocol v0.3.3](https://github.com/sganggs/Stronghold-Protocol/releases) 的集成改版，在保留上游核心玩法完整的前提下，新增多人扩展玩法、角色增强、游戏模式等功能。
 
 ---
 
@@ -308,8 +308,8 @@
 ## 项目结构
 
 ```
-Stronghold-Protocol-v0.3.1/
-├── Stronghold-Protocol/     # 上游核心（Git 子模块，追踪上游 v0.3.1）
+Stronghold-Protocol-v0.3.3/
+├── Stronghold-Protocol/     # 上游核心（Git 子模块，追踪上游 v0.3.3）
 │   └── plugins/             # 插件工作台插件
 │       ├── plugin-chat/     # 局内聊天
 │       ├── plugin-roomlist/ # 大厅房间列表
@@ -374,4 +374,4 @@ node mod-framework/scripts/check-patches.js clementia
 ## 致谢
 
 - 上游项目：[sganggs/Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol)
-- 上游版本：v0.3.1
+- 上游版本：v0.3.3

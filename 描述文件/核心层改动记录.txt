@@ -1,5 +1,5 @@
 # Stronghold Protocol 核心层改动记录
-# 范围：Stronghold-Protocol/ 内相对上游 v0.3.2 的改动
+# 范围：Stronghold-Protocol/ 内相对上游 v0.3.3 的改动
 # 组织：按上游更新指南五层递进归类
 # 用途：上游更新时按层逐步检查，每层确认对应改动是否保留/需合并
 # 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票 — 纯 override，无核心层改动）
@@ -132,31 +132,31 @@
 
   文件                                    基于     mod 特有逻辑
   ──────────────────────────────────────────────────────────────────────────────
-  js/screens/game.js                     v0.3.2   导入+渲染 CloneAffinityPicker（1978行）
-  js/screens/bandDraft.js                v0.3.2   clone draft 投票逻辑（512行）
-  js/screens/room.js                     v0.3.2   20p/clone 模式切换 + ConfigSelect（1100行）
-  css/screens/room.css                   v0.3.2   .rs-clock__ver + mod 特有样式（916行）
+  js/screens/game.js                     v0.3.3   导入+渲染 CloneAffinityPicker（1978行）
+  js/screens/bandDraft.js                v0.3.3   clone draft 投票逻辑（512行）
+  js/screens/room.js                     v0.3.3   20p/clone 模式切换 + ConfigSelect（1100行）
+  css/screens/room.css                   v0.3.3   .rs-clock__ver + mod 特有样式（916行）
 
   ── mods/玩法/20p/public/（A-type，mod 自有客户端文件）──
 
   文件                                    基于     mod 特有逻辑
   ──────────────────────────────────────────────────────────────────────────────
-  js/ui/teamPanel.js                     v0.3.2   分组分页（poolGroupSizes/pagePlayers/nav）（225行）
-  js/ui/choiceOverlay.js                 v0.3.2   分组悬赏 UI（GroupedChoiceView）
-  js/ui/gameLogic/draft.js               v0.3.2   分组数据解析（normalizeSpGroups）
-  js/screens/lobby.js                    v0.3.2   20p 房间 UI 扩展
-  css/screens/room.css                   v0.3.2   20p 房间样式
-  css/screens/game.css                   v0.3.2   20p 战斗样式
-  css/screens/game-panels.css            v0.3.2   分组样式（.spov__groups 等）
-  css/screens/lobby.css                  v0.3.2   20p 大厅样式
-  （其他 components/stats/net/runner/sw） v0.3.2   无特有改动，与上游一致
+  js/ui/teamPanel.js                     v0.3.3   分组分页（poolGroupSizes/pagePlayers/nav）（225行）
+  js/ui/choiceOverlay.js                 v0.3.3   分组悬赏 UI（GroupedChoiceView）
+  js/ui/gameLogic/draft.js               v0.3.3   分组数据解析（normalizeSpGroups）
+  js/screens/lobby.js                    v0.3.3   20p 房间 UI 扩展
+  css/screens/room.css                   v0.3.3   20p 房间样式
+  css/screens/game.css                   v0.3.3   20p 战斗样式
+  css/screens/game-panels.css            v0.3.3   分组样式（.spov__groups 等）
+  css/screens/lobby.css                  v0.3.3   20p 大厅样式
+  （其他 components/stats/net/runner/sw） v0.3.3   无特有改动，与上游一致
 
   ── mods/扩展角色/clementia/public/（A-type）──
 
   文件                                    基于     mod 特有逻辑
   ──────────────────────────────────────────────────────────────────────────────
-  js/ui/diyModel.js                      v0.3.2   _flags 透传 + DIY_OP_MODS 本地常量
-  js/screens/diy.js                      v0.3.2   克莱门莎原版/改版 + 迅捷/突袭切换 UI
+  js/ui/diyModel.js                      v0.3.3   _flags 透传 + DIY_OP_MODS 本地常量
+  js/screens/diy.js                      v0.3.3   克莱门莎原版/改版 + 迅捷/突袭切换 UI
 
   ★ 注意：A-type 文件（上游无同名对应）永远不应被版本漂移排查覆盖
 
@@ -314,7 +314,10 @@
   2b85af9                      fix: restore plugins/_removed and _template
   368bd29                      fix: add ROOM_CAPACITIES and DEFAULT_SEATS
   (tag: v0.3.2-base)          upstream v0.3.2 merge
-  (HEAD)                       0.3.2 升级适配修复（A-type/B-type 同步 + 导出兼容）
+  d89e255                     0.3.3 升级适配（A-type/B-type 同步 + 导出兼容）
+  3751b45 (tag: v1.2)         描述文件版本号同步至上游 v0.3.3
+  91f4ae4 (tag: v1.3.1-beta)  20p 休整期加时投票 + 联防跳过投票（测试版）
+  (HEAD)                      Merge branch 'main'：文档版本号与 v1.2 对齐
 
   ── 未提交的工作树改动（2026-10-26 第二轮测试修复）──
 
