@@ -1,6 +1,6 @@
 ===========================================================
   上游更新指南 — Git 版（五层完整流程）
-  最后更新：2026-10-27
+  最后更新：2026-10-28
 ===========================================================
 
 描述文件协作关系（四文件分工）：
@@ -27,7 +27,7 @@
 
 项目结构分五层，在上游更新时必须逐层递进：
 
-  Stronghold-Protocol-v0.3.2/               -- 项目根目录
+  Stronghold-Protocol-v0.3.3/               -- 项目根目录
   ├── Stronghold-Protocol/                  -- 【Git 仓库】第一层：上游核心
   │   ├── .git/                             -- Git 历史 & 配置
   │   ├── scripts/                          -- 启动/安装脚本（含 20p-loader.mjs）
@@ -157,7 +157,7 @@
 
   ── 1.1 拉取 + 预览 ──
 
-    cd d:\yjw\Stronghold-Protocol-v0.3.2\Stronghold-Protocol
+    cd d:\yjw\Stronghold-Protocol-v0.3.3\Stronghold-Protocol
     git fetch upstream --tags
     git log HEAD..v0.3.2 --oneline
     git diff HEAD..v0.3.2 --stat
@@ -521,7 +521,7 @@
       shared/playerCapacity.js                 shared/protocol.js
 
     适配步骤：
-      cd d:\yjw\Stronghold-Protocol-v0.3.2
+      cd d:\yjw\Stronghold-Protocol-v0.3.3
       node mod-framework\scripts\gen-patches.js 20p
       node mod-framework\scripts\check-patches.js 20p
 
@@ -650,7 +650,7 @@
   常用 Git 命令速查
 ===========================================================
 
-  cd d:\yjw\Stronghold-Protocol-v0.3.2\Stronghold-Protocol
+  cd d:\yjw\Stronghold-Protocol-v0.3.3\Stronghold-Protocol
 
   # 查看所有发布版本
   git fetch upstream --tags
