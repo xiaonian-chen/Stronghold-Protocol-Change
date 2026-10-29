@@ -1,6 +1,6 @@
 # 功能适配经验 — 问题排查与解决方案汇总
 # 组织：按功能模块归类，同模块不同问题归在一起
-# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票；rollPool 完整性修复 + 分组 family 一致性修复）
+# 最后更新：2026-10-29（20p 战斗倍速投票 1×/2× 双向切换；投票重复提交守卫；gameSpeed 复用链路）
 
 
 ################################################################################
@@ -341,6 +341,74 @@
     经验：同一个"漏怪数"在两处有不同口径——"本场总共漏了多少"（结算统计）
           和"此刻还剩几个"（跳过扣血）。复用结算函数时必须显式清空
           notReentered，否则会双重计数
+
+  ── 2.21 投票发起人默认一票却还能重复投票 ──
+    现象：申请人发起投票后（已自动计为同意），再点一次「同意」计数会 +1，
+          导致 1 个人贡献 2 票，半数门槛被提前击穿
+    根因：发起流程把 proposer 写进 vote.agreed，但 _vote() 入口没有做
+          "该席位是否已表态"的校验——UI 上按钮还留着，服务端也照收
+    修复：_vote() 第一行加守卫
+            if (agree ? vote.agreed.has(ps.playerId) : vote.declined.has(ps.playerId))
+              return fail(ERR.BAD_MSG, 'already voted')
+          客户端同步：已答复者不再渲染按钮，改渲染「你已同意 / 你已拒绝」
+    经验：幂等校验必须放在服务端业务入口，不能依赖客户端隐藏按钮
+          （重放/多开/网络重试都能绕过 UI）。凡是有"自动预置状态"的流程
+          （发起人自动同意、房主自动准备），都要假设客户端会重复提交
+
+  ── 2.22 倍速投票直接改 gameSpeed 导致"越申请越快" ──
+    现象：1× 申请 2× 后 gameSpeed 翻倍；再申请 2× 时 gameSpeed 又翻倍（4×）；
+          回到 1× 后速度变成原速的一半
+    根因：把 gameSpeed *= mul 当增量操作，没有保存"基准速度"；
+          而测试局可能把初始 combatSpeed 设成非标准值（如 1.5），
+          任何增量式的乘除都会累积误差
+    修复：引入 _speedBase（首次生效时的原始 gameSpeed）与
+          _speedMulState（当前倍数，初值 1）：
+            gameSpeed = min(200, _speedBase × _speedMulState)
+          每次投票只改 _speedMulState，再按上式重算，永远是"基准 × 倍数"，
+          回 1× 时精确还原
+    经验：实现"可反复切换的倍率"时，状态应该存"目标倍率 + 基准值"，
+          而不是对当前值做增量运算。增量运算在往返切换中必然漂移
+
+  ── 2.23 倍速在战斗中途生效导致服务端/客户端时钟错位 ──
+    现象：战斗打到一半有人申请倍速通过，倒计时瞬间跳变，或动画与服务端
+          deadline 对不上
+    根因：战斗阶段客户端已按 b.start.speed 下载并开始本地动画，
+          服务端 deadline 也已按旧 gameSpeed 算好；中途改 gameSpeed
+          不会重新下发 speed，也不会重算 deadline
+    修复：requestSpeedUp 只在 PREP 阶段允许（phase !== PREP 直接 fail），
+          UI 在非 PREP 时显示「仅休整期可申请」
+    经验：凡是"影响已下发计时/动画参数"的调整，只能在阶段边界做。
+          战斗内的调速需要额外下发重同步消息，成本远高于"仅休整期可申请"
+
+  ── 2.24 倍速投票与加时投票同时发起互相覆盖 ──
+    现象：同一休整期内先发起加时投票，再发起倍速投票，前一个投票的 UI 消失
+          但超时定时器还在跑
+    根因：两个投票各自维护 this.prepExtendVote / this.speedUpVote，
+          但 UI 只渲染其中一个；且两者都占用同一个休整期窗口
+    修复：三个发起函数统一收口到 _openVote(vote, onPass)：
+          进入前（在各 request 函数内）先检查"当前是否已有进行中的 PREP 投票"，
+          有则拒绝新发起；_openVote 负责票数达阈值时直接生效、
+          否则挂 timer + markPublic + flush，把这三段重复代码收进一处，
+          避免各处实现不一致
+    经验：同一时间窗内互斥的多个投票，必须有统一的"发起入口 + 占用检查"，
+          不能让每个投票各自实现一套。收口后新增第三种投票只是加一个分支
+
+  ── 2.25 倍速徽章放在战斗顶栏胶囊旁会覆盖上游 hud.js ──
+    现象：最初设计把「战斗 ×2」徽章塞进战斗顶栏胶囊区域，
+          需要改 public/js/ui/hud.js（核心层文件），上游每次升级都要重合并
+    修复：改放到 mod 自有的 teamPanel.js（A-type 覆盖，上游无同名文件），
+          常驻队伍面板顶部，整局可见且不与战斗 UI 抢位置
+    经验：新 UI 优先放在 mod 自有文件里。核心层文件每多改一处，
+          上游升级的合并成本就多一份；能用覆盖文件承接的绝不改核心层
+
+  ── 2.26 倍速只影响战斗/联防/boss，不影响休整期 ──
+    排查方法：确认三个阶段的倒计时来源
+      · combat.js / unitePhase.js / bossRounds.js 的 deadline 均由 gameSpeed 折算 ✅
+      · 休整期倒计时与选阵倒计时读 prepDeadline / 各自 turnTimer，不读 gameSpeed ✅
+      · 客户端 b.start 的 speed 字段来自 clientCombat.js 的 _startMsg ✅
+      → 因此改 gameSpeed 恰好只影响这三阶段的动画与倒计时，符合需求
+    经验：确认"某个开关影响范围"时，不要只看变量名，要顺着
+          "变量 → 谁读它 → 读它的人控制什么"走一遍全链路
 
 
 ################################################################################
@@ -727,11 +795,11 @@
   finalAssault.js  >0  ✅ bossPoolHp
 
   ── 20p 客户端 override ──
-  teamPanel.js    +20  ✅ 分页逻辑（已修复）
+  teamPanel.js    +20 → +150  ✅ 分页逻辑 + SpeedBadge 倍速区 + VotePanel（2026-10-29）
   lobby.js        +14  ✅ mod UI
   room.css        +81  ✅ mod 样式
   lobby.css       +37  ✅
-  game.css        +41  ✅
+  game.css        +41 → +90  ✅ .team__nav / .team__speed / .team__vote 样式（2026-10-29）
   game-panels.css +13  ✅
   sw.js             0  ✅
   net.js            0  ✅
@@ -740,7 +808,7 @@
   constants.js      0  ✅
   diy.js          +13  ✅ _flags 扩展
   playerCapacity   mod-only  ✅ 20p 特有
-  protocol.js      +9  ✅ C2S 消息注册
+  protocol.js      +9 → +25  ✅ C2S 六条投票消息注册 + mul 校验（2026-10-29）
 
   ── clementia override ──
   spec.js           0  ✅
@@ -816,3 +884,44 @@
       load.js：fetchWithRetry(2次) + loadScenePack 3次重试
       files.js：.bin 从 COMPRESSIBLE 移除（不再压缩二进制顶点数据）
     根因：SW fetch 失败无重试 + 浏览器缓存异常 + .bin brotli 压缩差异
+
+────────────────────────────────────────────────────────────────────────────────
+第七轮（2026-10-29）：投票系统复核 + 战斗倍速投票新增
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                    状态     归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  发起人已默认一票还能重复投票            ✅       2.21
+  2  倍速改成 1×/2× 双向切换（原为单次 ×2）  ✅       2.22
+  3  倍速仅限休整期发起（避免时钟错位）      ✅       2.23
+  4  加时/倍速投票互斥（统一 _openVote）     ✅       2.24
+  5  倍速徽章位置（不覆盖上游 hud.js）       ✅       2.25
+  6  倍速影响范围确认（三阶段，不含休整期）  ✅       2.26
+
+  本轮改动文件：
+    mods/玩法/20p/overrides/server/match/match/votes.js
+      · SPEED_MUL 常量 → SPEED_MULS = new Set([1, 2])
+      · 新增 _openVote 统一发起收口（票数达阈值直接生效 / 否则 timer+markPublic+flush）
+      · _vote 入口新增重复提交守卫（already voted）
+      · requestSpeedUp 增加 mul 参数 + PREP 阶段校验 + 同值拒绝
+      · _applySpeedUp 改为读 vote.mul，_speedBase × _speedMulState 重算
+      · 移除 _speedMulApplied 单次限制
+    mods/玩法/20p/overrides/server/match/match/views.js
+      · speedUpVote 增加 mul 字段
+      · 新增整局字段 speedMul
+      · 移除 speedUpDone
+    mods/玩法/20p/overrides/server/match/match/platform.js
+      · VOTE_TYPES 四条 → 六条（+ g.speedUp / g.speedUpVote）
+    mods/玩法/20p/overrides/shared/protocol.js
+      · 新增 g.speedUp（mul ∈ {1,2}）/ g.speedUpVote 校验
+    mods/玩法/20p/public/js/ui/teamPanel.js
+      · 新增 SpeedBadge（队伍面板顶部可点击倍速区）
+      · VotePanel 移除倍速按钮，已答复者不再渲染按钮
+    mods/玩法/20p/public/css/screens/game.css
+      · 新增 .team__speed 系列样式
+
+  验证要点：
+    □ 机器人房间：机器人不参与投票、不进分母（_voteSeats 只算 humans 在线）
+    □ 发起人 1 人房：票数直接达阈值，无需投票即生效（_openVote 短路）
+    □ 观战者：看不到申请按钮、显示「观战中，无法投票」
+    □ 1×→2×→1×→2× 反复切换，gameSpeed 始终为 基准 × 倍数，无漂移

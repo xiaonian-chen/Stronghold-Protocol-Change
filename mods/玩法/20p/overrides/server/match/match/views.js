@@ -91,7 +91,7 @@ export class MatchViews {
         voters: this.setupVote.voters.slice(),
         agreed: [...this.setupVote.agreed],
       } : null,
-      // 20p: the two majority votes (votes.js). Published only while the round / plan they were opened for is the
+      // 20p: the three majority votes (votes.js). Published only while the round / plan they were opened for is the
       // current one, so a stale vote never shows up in a later phase.
       prepExtendVote: this.phase === PHASE.PREP && this.prepExtendVote && this.prepExtendVote.round === this.round ? {
         id: this.prepExtendVote.id,
@@ -103,6 +103,17 @@ export class MatchViews {
         endsAt: this.prepExtendVote.endsAt,
       } : null,
       prepExtendDone: this.phase === PHASE.PREP && this._prepExtendRound === this.round,
+      // 20p: the 战斗倍速 vote (votes.js) — same shape, plus the factor it sets once it passed
+      speedUpVote: this.phase === PHASE.PREP && this.speedUpVote && this.speedUpVote.round === this.round ? {
+        id: this.speedUpVote.id,
+        mul: this.speedUpVote.mul,
+        proposerId: this.speedUpVote.proposerId,
+        voters: this.speedUpVote.voters.slice(),
+        agreed: [...this.speedUpVote.agreed],
+        declined: [...this.speedUpVote.declined],
+        endsAt: this.speedUpVote.endsAt,
+      } : null,
+      speedMul: this._speedMulState || 1,
       uniteSkipVote: this.phase === PHASE.UNITE && this.uniteSkipVote && this.uniteSkipVote.plan === this.unitePlan ? {
         id: this.uniteSkipVote.id,
         proposerId: this.uniteSkipVote.proposerId,

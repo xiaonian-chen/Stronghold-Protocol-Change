@@ -1,7 +1,7 @@
 # 非上游文件功能记录 — 记录所有非上游文件基于上游添加的内容和实现的功能
 # 用途：记录所有非上游文件基于上游添加的内容和实现的功能
 #       以防更新上游时遗漏这部分功能
-# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票；rollPool 完整性修复 + 分组 family 一致性修复 + 局内界面盘点）
+# 最后更新：2026-10-29（20p 战斗倍速投票 1×/2× 双向切换 + 可点击倍速区；投票重复提交守卫）
 
 
 ================================================================================
@@ -137,18 +137,20 @@
       基于上游添加：_20pActive 标志 + match:init 事件触发 + 联防轮次逻辑
                       + 禁用飞行类敌人（Object.defineProperty 遮蔽 factions getter）【20p】
                       + Boss 限伤开关【20p】
-                      + Match20pVotes 方法容器挂载（votes.js 的两个投票方法）【20p】
+                      + Match20pVotes 方法容器挂载（votes.js 的三个投票方法）【20p】
       更新上游时注意：必须保留 _20pActive + 禁用飞行 + Boss 限伤逻辑
-                      + Match20pVotes 挂载（休整期加时 / 联防跳过投票）
+                      + Match20pVotes 挂载（休整期加时 / 联防跳过 / 战斗倍速投票）
 
     mods/玩法/20p/overrides/server/match/match/votes.js（⚠ 新增，上游无此文件）
-      功能：20p 两个半数通过投票（2026-10-28 新增）
+      功能：20p 三个半数通过投票（2026-10-28 加时/跳过，2026-10-29 新增倍速）
       机制：导出 Match20pVotes 类，由 Match.js 挂到 Match 原型链上，方法包含
-            · _handle20pVote(ps, msg) — 四条 C2S 意图的分发入口（platform.js 调用）
+            · _handle20pVote(ps, msg) — 六条 C2S 意图的分发入口（platform.js 调用）
             · requestPrepExtend / votePrepExtend — 休整期加时（+30s / +60s）
             · requestUniteSkip / voteUniteSkip — 联防跳过
+            · requestSpeedUp / voteSpeedUp — 战斗倍速（mul ∈ SPEED_MULS = {1, 2}）
+            · _openVote — 发起收口：发起人票数已达阈值则直接生效，否则挂超时并广播
             · _voteSeats / _voteNeed / _vote / _endVote / _expireVote — 投票管道
-            · _applyPrepExtend / _applyUniteSkip — 通过后的生效逻辑
+            · _applyPrepExtend / _applyUniteSkip / _applySpeedUp — 通过后的生效逻辑
       关键规则：
             · 半数阈值 = ceil(在座且在线的人数 / 2)，发起人自动计为同意
             · 拒绝只剔除该席位，剩余可同意席位不足半数时才结束投票
@@ -157,9 +159,23 @@
             · 跳过按 _uniteLeft 统计的在场敌人数扣血（与结算同一上限），
               场上敌人直接清除、不给任何资金/击杀，随后走原 settle()，
               合成结果 res 只带 perPlayer[pid].leaked，不带 coins/killed
+            · 倍速是整局状态（_speedMulState 记当前倍数，_speedBase 记起始时钟）：
+              首次生效时把当时的 gameSpeed 存为 _speedBase，之后
+              gameSpeed = min(200, _speedBase × mul)，回 1× 时精确还原原速
+              （测试局的自定义 combatSpeed 因此不会被乘两次）
+            · 倍速只影响 COMBAT / 联防 / boss 三阶段（它们的 deadline、
+              客户端 b.start 的 speed、加时消耗都读 gameSpeed）；
+              休整期与选阵倒计时读自己的计时器，不受影响
+            · 倍速只能在 PREP 发起（战斗进行中改 gameSpeed 会让服务端 deadline
+              与客户端已下发的 speed 错位）；当前倍数已等于目标倍数时拒绝
+            · 同一休整期内两个 PREP 投票（加时 / 倍速）互斥，同时只开一个
+            · 重复提交守卫：发起人已在 agreed，再次提交同意返回 'already voted'；
+              已拒绝者重复拒绝同样被拒（服务端强制，不依赖 UI 隐藏按钮）
       更新上游时注意：如果上游新增同名 votes.js 需合并；否则保留此文件
                       （依赖 Match 的 humans/_uniteLeft/_stopClientCombat/
-                        setDeadline/prepDeadline/settle/later/cancel 等公开方法）
+                        setDeadline/prepDeadline/settle/later/cancel 等公开方法，
+                        以及核心层 gameSpeed 字段——上游若重命名该字段，
+                        _applySpeedUp 必须同步改名）
 
     mods/玩法/20p/overrides/server/match/match/spDraft.js
       基于上游添加：poolGroups 分组悬赏逻辑 + deadline 超时 + 分组轮转
@@ -192,17 +208,21 @@
     mods/玩法/20p/overrides/server/match/match/views.js
       基于上游添加：联防轮次输出（round/roundsMax）+ 每组 turnDeadline 序列化
                       + prepExtendVote / prepExtendDone 输出【20p】
+                      + speedUpVote（含 mul 目标倍数）/ speedMul 输出【20p 2026-10-29】
                       + uniteSkipVote 输出【20p】
-                      + 两个投票的 voters/agreed/declined/endsAt/seconds/proposerId 字段
-      更新上游时注意：必须保留投票视图字段（客户端 VotePanel 依赖 agreed/declined/voters）
+                      + 三个投票的 voters/agreed/declined/endsAt/seconds/mul/proposerId 字段
+      更新上游时注意：必须保留投票视图字段（客户端 SpeedBadge / VotePanel 依赖
+                        agreed/declined/voters/endsAt/mul）
+                      + speedMul 是整局字段（不受 phase 限制），供倍速区常驻显示
                       + 投票仅在"仍在当前轮/当前 plan"时才输出（过期投票自动消失）
+                      + speedUpDone 已移除（倍速改为可反复切换的整局状态，不再是一次性开关）
 
     mods/玩法/20p/overrides/server/match/match/setupVote.js
       基于上游添加：20p 投票设置
 
     mods/玩法/20p/overrides/server/match/match/platform.js
       基于上游添加：20p 平台逻辑
-                      + VOTE_TYPES 前置路由：四条投票意图先交给 _handle20pVote，
+                      + VOTE_TYPES 前置路由：六条投票意图先交给 _handle20pVote，
                         不进入上游 intents.js 分发（避免与上游意图表冲突）
       更新上游时注意：必须保留投票意图前置路由
 
@@ -239,10 +259,15 @@
     mods/玩法/20p/overrides/shared/protocol.js
       基于上游添加：
         · C2S 'g.setAffinityBond' 消息注册【clone】
-        · C2S 'g.prepExtend' / 'g.prepExtendVote' / 'g.uniteSkip' / 'g.uniteSkipVote' 注册【20p】
+        · C2S 'g.prepExtend' / 'g.prepExtendVote' / 'g.uniteSkip' / 'g.uniteSkipVote'
+          / 'g.speedUp' / 'g.speedUpVote' 注册【20p】
+          · g.prepExtend: seconds ∈ {30, 60}
+          · g.speedUp: mul ∈ {1, 2}（2026-10-29 新增字段校验）
+          · 两个 *Vote: voteId 正整数 + agree 布尔
         · setGameMode 白名单含 'dupBand'/'clone'【dupBand/clone】
         · ROOM_CAPACITIES 导入【20p】
-      更新上游时注意：必须保留 C2S 注册（含四条投票消息）和白名单扩展
+      更新上游时注意：必须保留 C2S 注册（含六条投票消息及其字段校验）和白名单扩展
+                      （缺字段校验会导致客户端发错 mul 时静默通过，服务端才拦）
 
     mods/玩法/20p/overrides/shared/constants.js
       基于上游添加：ROOM_CAPACITIES / DEFAULT_SEATS 导出【20p】
@@ -264,16 +289,29 @@
       更新上游时注意：字段名必须用 turnPid（非 turn），必须使用 pickSp
 
     mods/玩法/20p/public/js/ui/teamPanel.js
-      功能：分组队伍面板导航 + 投票面板
+      功能：分组队伍面板导航 + 倍速区 + 投票面板
       基于上游添加：组切换导航（◀/▶ 左右箭头、分组 X/X 文本）
                     + 导航移到头像上方 + pointer-events: auto（2026-10-26 优化）
+                    + SpeedBadge 组件（2026-10-29）：
+                      · 队伍面板最顶部的可点击倍速区，显示「战斗 ×1 / ×2」
+                      · ×1 普通底色、×2 薄荷绿高亮（.is-fast），整局常驻不消失
+                      · 点击标题栏展开/收起（aria-expanded + ▴/▾ 箭头）
+                      · ×1 时展开只有「申请 2 倍速」，×2 时只有「申请 1 倍速」
+                        （act('g.speedUp', { mul: 目标值 })）——本局内唯一调倍速入口
+                      · 有进行中的倍速投票时自动展开，标题栏显示 X/Y 计数
+                      · 投票中显示「同意」「拒绝」，已答复者显示「你已同意/你已拒绝」
+                      · 观战者显示「观战中，无法投票」；非 PREP 显示「仅休整期可申请」
                     + VotePanel 组件（2026-10-28）：
                       · 休整期显示「加时 +30s」「加时 +60s」发起按钮
                       · 联防阶段显示「联防跳过投票」发起按钮
-                      · 投票进行中显示标题（含秒数/发起人）、同意计数 X/Y、
-                        「同意」「拒绝」按钮（已投过的按钮禁用）
+                      · 投票进行中显示标题（含秒数）、同意计数 X/Y、「同意」「拒绝」
+                      · 已答复者只显示「你已同意/你已拒绝」（2026-10-29 新增，
+                        配合服务端重复提交守卫）
                       · 通过 act('g.prepExtend'|'g.prepExtendVote'|'g.uniteSkip'|'g.uniteSkipVote') 发送
+                      · 倍速按钮已从此处移除（2026-10-29 迁到 SpeedBadge）
       更新上游时注意：必须保留 pointer-events: auto + 左右箭头 + 上方位置
+                      + SpeedBadge（依赖 pub.speedMul / pub.speedUpVote（含 mul）
+                        / pub.phase 与 myId）
                       + VotePanel（依赖 pub.prepExtendVote / pub.prepExtendDone /
                         pub.uniteSkipVote 字段与 myId）
 
@@ -289,6 +327,10 @@
       功能：20p 游戏样式
       基于上游添加：.team__nav 样式（背景/圆角/hover/pointer-events: auto）
                     + 分组 X/X 文本加粗加深（2026-10-26 优化）
+                    + .team__speed 系列样式（2026-10-29）：
+                      .team__speed / .is-fast / -head / -icon / -txt / -count
+                      / -caret / -body / -btns / -note
+                      （×1 中性底色，×2 薄荷绿高亮；标题栏为整宽可点按钮）
                     + .team__vote 系列样式（2026-10-28）：
                       .team__vote / -head / -title / -count / -btns / -hint
                       （半透明底 + var(--line-2) 描边 + .btn 自适应高度）
@@ -483,6 +525,10 @@
     说明：votes.js 上游无同名文件，gen-patches 会 [SKIP]（不计入指纹），
           check-patches 不会报 [MISSING]，因此无需重新生成
     结论：仅在"上游新增了同名文件"或"上游文件内容变化"时才需重跑 gen-patches.js
+    2026-10-29 提示：本轮只改 mod 侧文件（votes.js / views.js / protocol.js /
+          teamPanel.js / game.css），未触碰 Stronghold-Protocol/ 内任何上游源文件，
+          指纹基准不变；但 views.js 与 protocol.js 是 B-type，其内容变化不影响
+          fingerprint.json（指纹只记录"对应上游文件的 SHA-256"，不记录 mod 版本）
 
   ── clementia mod（mods/扩展角色/clementia/patches/fingerprint.json）──
     已收录：2 个（server/sim/spec.js, shared/diy.js）
@@ -518,10 +564,10 @@
   □ shared/constants.js — ROOM_CAPACITIES / DEFAULT_SEATS 导出
   □ spDraft.js — poolGroups 分组 + 独立 _turnToken/_turnTimer + deadline 超时 + 30s 计时
   □ unitePhase.js — 联防多轮推进（_uniteNextOrSettle）+ 开头 phase/plan 匹配检查
-  □ votes.js — 休整期加时投票 + 联防跳过投票（Match20pVotes）⚠ 新增
-  □ views.js — prepExtendVote / prepExtendDone / uniteSkipVote 输出（含 declined）
-  □ platform.js — VOTE_TYPES 四条投票意图前置路由
-  □ protocol.js — 四条投票 C2S 消息注册
+  □ votes.js — 休整期加时 / 联防跳过 / 战斗倍速 三个投票（Match20pVotes）⚠ 新增
+  □ views.js — prepExtendVote / prepExtendDone / speedUpVote（含 mul）/ speedMul / uniteSkipVote 输出
+  □ platform.js — VOTE_TYPES 六条投票意图前置路由
+  □ protocol.js — 六条投票 C2S 消息注册（含 g.speedUp 的 mul ∈ {1,2} 校验）
   □ Match.js — Match20pVotes 挂载
   □ economy.js — _effectiveShopSlots 扩展
   □ Match.js — _20pActive + match:init + 禁用飞行 + Boss 限伤
@@ -531,8 +577,8 @@
   □ lobby.js — freezeDiy 保留 _flags
   □ battle.js — clementia_global_kills 安装器
   □ meta.js — duckReplace hook
-  □ A-type 客户端文件：choiceOverlay.js（turnPid + pickSp）+ teamPanel.js（◀▶ + 上方位置 + VotePanel）
-  □ A-type 客户端文件：draft.js + game-panels.css + game.css（.team__nav / .team__vote 样式）
+  □ A-type 客户端文件：choiceOverlay.js（turnPid + pickSp）+ teamPanel.js（◀▶ + 上方位置 + SpeedBadge + VotePanel）
+  □ A-type 客户端文件：draft.js + game-panels.css + game.css（.team__nav / .team__speed / .team__vote 样式）
   □ A-type 客户端文件：lobby.js（SweepReport + 禁用飞行/Boss限伤开关 UI）
 
   ── clementia mod ──

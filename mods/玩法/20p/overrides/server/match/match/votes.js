@@ -1,4 +1,4 @@
-// server/match/match/votes.js — 20p extension (a method container of its own, installed by Match.js): the two
+// server/match/match/votes.js — 20p extension (a method container of its own, installed by Match.js): the three
 // majority votes of the 20-player mode. Unlike the unanimous setup reroll (setupVote.js), a vote here passes as soon
 // as half of the seated humans agree (the proposer counts as one).
 //
@@ -12,7 +12,14 @@
 // helpers, and the phase settles through the ordinary settle() — the synthetic result below carries the survivors
 // only, so the helpers gain no funds and no credited kills from it.
 //
-// A vote that nobody answers cancels itself after VOTE_WINDOW_MS; a rejected one ends at once. Both votes are
+// 战斗倍速 (requestSpeedUp / voteSpeedUp): any seated human asks during PREP to run the match's animation clock at
+// 1× or 2×; on passing, `gameSpeed` is set to base × that factor, so every later COMBAT / 联防 / boss phase runs its
+// clock (and its client animation) at that speed. The prep timer and the strategy draft never read gameSpeed, so only
+// those three phases change. The factor is a match-long state, not a one-shot: it can be turned back to 1× in a later
+// PREP, and this vote is the only way to change it. Like the other two votes, a speed vote is refused while another
+// prep vote is open, so at most one of them shows at a time.
+//
+// A vote that nobody answers cancels itself after VOTE_WINDOW_MS; a rejected one ends at once. All three votes are
 // dropped lazily: each carries the round (prep) or the plan (联防) it was opened for, and the views publish it only
 // while that still matches, so a stale vote can never be voted on or shown.
 
@@ -24,9 +31,13 @@ import { msg } from '../../../shared/i18n.js';
 const VOTE_WINDOW_MS = 20_000;
 /** The extensions a prep vote may ask for, in seconds. */
 const EXTEND_SECONDS = new Set([30, 60]);
+/** The animation-clock factors a 战斗倍速 vote may set: the match's own pace, or twice it. */
+export const SPEED_MULS = new Set([1, 2]);
+/** The ceiling Match.js puts on gameSpeed (its constructor clamps combatSpeed to it). */
+const MAX_GAME_SPEED = 200;
 
-/** The C2S intents of the two votes: platform.js dispatches them here, before intents.js sees them. */
-export const VOTE_TYPES = new Set(['g.prepExtend', 'g.prepExtendVote', 'g.uniteSkip', 'g.uniteSkipVote']);
+/** The C2S intents of the votes: platform.js dispatches them here, before intents.js sees them. */
+export const VOTE_TYPES = new Set(['g.prepExtend', 'g.prepExtendVote', 'g.uniteSkip', 'g.uniteSkipVote', 'g.speedUp', 'g.speedUpVote']);
 
 /** The enemies the skip charges: a placeholder leak per still-standing enemy, so uniteSurvivors reads exactly them. */
 const skipLeaks = (playerId, n) => Array.from({ length: n }, () => ({ enemyKey: 'unite-skip', sourcePlayerId: playerId, counted: true }));
@@ -39,6 +50,8 @@ export class Match20pVotes {
       case 'g.prepExtendVote': return this.votePrepExtend(ps, msg.voteId, msg.agree);
       case 'g.uniteSkip': return this.requestUniteSkip(ps);
       case 'g.uniteSkipVote': return this.voteUniteSkip(ps, msg.voteId, msg.agree);
+      case 'g.speedUp': return this.requestSpeedUp(ps, msg.mul);
+      case 'g.speedUpVote': return this.voteSpeedUp(ps, msg.voteId, msg.agree);
       default: return fail(ERR.BAD_MSG);
     }
   }
@@ -53,6 +66,8 @@ export class Match20pVotes {
     if (this._prepExtendRound === this.round) return fail(ERR.WRONG_PHASE, 'prep already extended this round');
     const cur = this.prepExtendVote;
     if (cur && cur.round === this.round) return fail(ERR.WRONG_PHASE, 'prep extension vote in progress');
+    const other = this.speedUpVote;
+    if (other && other.round === this.round) return fail(ERR.WRONG_PHASE, 'speed-up vote in progress');
     const voters = this._voteSeats();
     if (!voters.length) return fail(ERR.NOT_IN_ROOM);
     const vote = {
@@ -67,16 +82,51 @@ export class Match20pVotes {
       endsAt: this.sched.now() + this.scaled(VOTE_WINDOW_MS),
     };
     this.prepExtendVote = vote;
-    vote.timer = this.later(this.scaled(VOTE_WINDOW_MS), () => this._expireVote(vote));
-    this.markPublic();
-    this.flush(true);
-    return OK;
+    return this._openVote(vote, () => this._applyPrepExtend(vote));
   }
 
   votePrepExtend(ps, voteId, agree) {
     const vote = this.prepExtendVote;
     if (this.disposed || this.ended || this.phase !== PHASE.PREP || !vote || vote.round !== this.round) return fail(ERR.WRONG_PHASE);
     return this._vote(ps, vote, voteId, agree, () => this._applyPrepExtend(vote));
+  }
+
+  // ---- 战斗倍速 ---------------------------------------------------------
+
+  /**
+   * Any seated human asks, during PREP, to run every later COMBAT / 联防 / boss phase at `mul` × the base clock.
+   * @param {number} mul 1 (the match's own pace) or 2
+   */
+  requestSpeedUp(ps, mul) {
+    if (this.disposed || this.ended || this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    if (!ps || ps.spectator || ps.isBot || ps.left || !ps.connected) return fail(ERR.NOT_IN_ROOM);
+    if (!SPEED_MULS.has(mul)) return fail(ERR.BAD_MSG, 'unknown multiplier');
+    if ((this._speedMulState || 1) === mul) return fail(ERR.WRONG_PHASE, 'speed already at that multiplier');
+    const cur = this.speedUpVote;
+    if (cur && cur.round === this.round) return fail(ERR.WRONG_PHASE, 'speed-up vote in progress');
+    const other = this.prepExtendVote;
+    if (other && other.round === this.round) return fail(ERR.WRONG_PHASE, 'prep extension vote in progress');
+    const voters = this._voteSeats();
+    if (!voters.length) return fail(ERR.NOT_IN_ROOM);
+    const vote = {
+      id: (this._20pVoteSeq = (this._20pVoteSeq || 0) + 1),
+      kind: 'speed',
+      round: this.round,
+      mul,
+      proposerId: ps.playerId,
+      voters,
+      agreed: new Set([ps.playerId]),
+      declined: new Set(),
+      endsAt: this.sched.now() + this.scaled(VOTE_WINDOW_MS),
+    };
+    this.speedUpVote = vote;
+    return this._openVote(vote, () => this._applySpeedUp(vote));
+  }
+
+  voteSpeedUp(ps, voteId, agree) {
+    const vote = this.speedUpVote;
+    if (this.disposed || this.ended || this.phase !== PHASE.PREP || !vote || vote.round !== this.round) return fail(ERR.WRONG_PHASE);
+    return this._vote(ps, vote, voteId, agree, () => this._applySpeedUp(vote));
   }
 
   // ---- 联防跳过 ----------------------------------------------------------
@@ -99,10 +149,7 @@ export class Match20pVotes {
       endsAt: this.sched.now() + this.scaled(VOTE_WINDOW_MS),
     };
     this.uniteSkipVote = vote;
-    vote.timer = this.later(this.scaled(VOTE_WINDOW_MS), () => this._expireVote(vote));
-    this.markPublic();
-    this.flush(true);
-    return OK;
+    return this._openVote(vote, () => this._applyUniteSkip(vote));
   }
 
   voteUniteSkip(ps, voteId, agree) {
@@ -116,11 +163,31 @@ export class Match20pVotes {
   /** The seats that may vote: every human still in the room and connected (a seat that dropped out cannot answer). */
   _voteSeats() { return this.humans().filter((p) => p.connected).map((p) => p.playerId); }
 
-  /** One seat's answer to an open vote; `onPass` runs once half of the voters agreed (the proposer included). */
+  /**
+   * Arm a freshly proposed vote. The proposer already counts as one agreeing seat, so a room where that is already
+   * half passes it at once — there is nothing left to ask. Otherwise it waits VOTE_WINDOW_MS for the others.
+   */
+  _openVote(vote, onPass) {
+    if (vote.agreed.size >= this._voteNeed(vote)) {
+      this._endVote(vote);
+      return onPass();
+    }
+    vote.timer = this.later(this.scaled(VOTE_WINDOW_MS), () => this._expireVote(vote));
+    this.markPublic();
+    this.flush(true);
+    return OK;
+  }
+
+  /**
+   * One seat's answer to an open vote; `onPass` runs once half of the voters agreed (the proposer included).
+   * A seat answers once: the proposer is already in `agreed`, and re-sending the same answer would let one client
+   * stack votes (the UI hides the buttons for a seat that answered, this is the server-side guard).
+   */
   _vote(ps, vote, voteId, agree, onPass) {
     if (vote.id !== voteId) return fail(ERR.BAD_TARGET, 'vote changed');
     if (!ps || ps.spectator || ps.left || !ps.connected) return fail(ERR.NOT_IN_ROOM);
     if (!vote.voters.includes(ps.playerId)) return fail(ERR.NOT_IN_ROOM);
+    if (agree ? vote.agreed.has(ps.playerId) : vote.declined.has(ps.playerId)) return fail(ERR.BAD_MSG, 'already voted');
     if (!agree) {
       // a single 拒绝 does not kill a 20-seat vote: it only takes that seat out, and the vote ends once it can no longer pass
       vote.declined.add(ps.playerId);
@@ -153,6 +220,7 @@ export class Match20pVotes {
     vote.timer = null;
     if (this.prepExtendVote === vote) this.prepExtendVote = null;
     if (this.uniteSkipVote === vote) this.uniteSkipVote = null;
+    if (this.speedUpVote === vote) this.speedUpVote = null;
     this.markPublic();
     this.flush(true);
   }
@@ -161,6 +229,7 @@ export class Match20pVotes {
     vote.timer = null;
     if (this.prepExtendVote === vote) this.prepExtendVote = null;
     if (this.uniteSkipVote === vote) this.uniteSkipVote = null;
+    if (this.speedUpVote === vote) this.speedUpVote = null;
     this.markPublic();
     this.flush(true);
   }
@@ -174,6 +243,26 @@ export class Match20pVotes {
     // setDeadline scales its seconds again, so it takes the already-real total divided by that scale (phases.js bandTurn)
     this.setDeadline((left + this.scaled(vote.seconds * 1000)) / 1000 / (this.timerScale || 1), () => this.prepDeadline());
     this.tickerText(msg('休整期加时 {secs} 秒', { secs: vote.seconds }), FLOW_TICKER_PRIORITY);
+    this.markPublic();
+    this.flush(true);
+    return OK;
+  }
+
+  /**
+   * Set the match's animation clock to base × the agreed factor. Every COMBAT / 联防 / boss phase derives its
+   * deadline, its client `b.start` speed and its overtime drain from `gameSpeed`, so this paces all three; PREP and
+   * the strategy draft read their own timers and are untouched. `_speedBase` is the clock the match started with, kept
+   * so a later 1× vote returns to it exactly (and so a test's custom combatSpeed is not multiplied twice).
+   */
+  _applySpeedUp(vote) {
+    if (this.phase !== PHASE.PREP || this.round !== vote.round) return fail(ERR.WRONG_PHASE);
+    if ((this._speedMulState || 1) === vote.mul) return fail(ERR.WRONG_PHASE, 'speed already at that multiplier');
+    if (!(this._speedBase > 0)) this._speedBase = this.gameSpeed;
+    this._speedMulState = vote.mul;
+    this.gameSpeed = Math.min(MAX_GAME_SPEED, this._speedBase * vote.mul);
+    this.tickerText(vote.mul > 1
+      ? msg('战斗倍速 ×{mul}：战斗、联防、boss 阶段动画加速', { mul: vote.mul })
+      : msg('战斗倍速恢复 ×1：战斗、联防、boss 阶段动画恢复原速'), FLOW_TICKER_PRIORITY);
     this.markPublic();
     this.flush(true);
     return OK;

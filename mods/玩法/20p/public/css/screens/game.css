@@ -962,6 +962,21 @@
 .team__nav-btn { pointer-events: auto; min-width: .26rem; min-height: .22rem; background: rgba(255, 255, 255, .08); border: 1px solid var(--line-2); border-radius: .04rem; color: var(--text-lo); font-size: calc(.13 * var(--t)); cursor: pointer; line-height: 1; }
 .team__nav-btn:hover, .team__nav-btn:focus-visible { border-color: var(--mint-700); color: var(--mint-400); background: rgba(23, 249, 183, .1); }
 .team__nav-info { font-size: calc(.14 * var(--t)); color: var(--text); font-weight: 600; min-width: .4rem; text-align: center; letter-spacing: .04em; }
+/* 20p: the 战斗倍速 area — a header that unfolds the 申请 1×/2× vote (votes.js); neutral at ×1, mint once doubled */
+.team__speed { pointer-events: auto; display: flex; flex-direction: column; margin-bottom: .02rem; background: rgba(0, 0, 0, .45); border: 1px solid var(--line-2); border-radius: .06rem; overflow: hidden; }
+.team__speed.is-fast { background: rgba(23, 249, 183, .12); border-color: var(--mint-700); }
+.team__speed-head { display: flex; align-items: center; justify-content: center; gap: .05rem; width: 100%; padding: .05rem .1rem; background: none; border: 0; cursor: pointer; color: inherit; font: inherit; }
+.team__speed-head:hover, .team__speed-head:focus-visible { background: rgba(255, 255, 255, .06); }
+.team__speed-icon { width: .16rem; height: .16rem; color: var(--text-lo); flex: none; }
+.team__speed.is-fast .team__speed-icon { color: var(--mint-400); }
+.team__speed-txt { font-size: calc(.13 * var(--t)); color: var(--text); font-weight: 700; letter-spacing: .04em; }
+.team__speed.is-fast .team__speed-txt { color: var(--mint-400); }
+.team__speed-count { font-size: calc(.12 * var(--t)); color: var(--mint-400); font-weight: 700; letter-spacing: .04em; }
+.team__speed-caret { font-size: calc(.12 * var(--t)); color: var(--text-lo); line-height: 1; }
+.team__speed-body { display: flex; flex-direction: column; gap: .04rem; padding: 0 .08rem .06rem; }
+.team__speed-btns { display: flex; flex-wrap: wrap; align-items: center; gap: .04rem; }
+.team__speed-btns .btn { flex: 1 1 auto; min-height: .22rem; }
+.team__speed-note { font-size: calc(.12 * var(--t)); color: var(--text-lo); line-height: 1.35; }
 /* 20p: the two majority votes (休整期加时 / 联防跳过) — the panel sits under the group nav, above the rows */
 .team__vote { pointer-events: auto; display: flex; flex-direction: column; gap: .04rem; padding: .06rem .08rem; margin-bottom: .02rem; background: rgba(0, 0, 0, .45); border: 1px solid var(--line-2); border-radius: .06rem; }
 .team__vote-head { display: flex; align-items: center; justify-content: space-between; gap: .08rem; }

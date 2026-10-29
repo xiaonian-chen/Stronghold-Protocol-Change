@@ -2,7 +2,7 @@
 # 范围：Stronghold-Protocol/ 内相对上游 v0.3.3 的改动
 # 组织：按上游更新指南五层递进归类
 # 用途：上游更新时按层逐步检查，每层确认对应改动是否保留/需合并
-# 最后更新：2026-10-28（20p 休整期加时投票 + 联防跳过投票 — 纯 override，无核心层改动；描述文件版本号同步至上游 v0.3.3）
+# 最后更新：2026-10-29（20p 战斗倍速投票 1×/2× 双向切换 — 纯 override，复用上游 gameSpeed，无核心层改动；投票重复提交守卫）
 
 
 ================================================================================
@@ -213,7 +213,7 @@
     server/match/match/setupVote.js          server/match/match/spDraft.js
     server/match/match/views.js
     server/match/match/unitePhase.js         ← 2026-10-26 新增：联防多轮推进
-    server/match/match/votes.js              ← 2026-10-28 新增：两个半数投票
+    server/match/match/votes.js              ← 2026-10-28 新增：三个半数投票（含 2026-10-29 倍速）
     server/match/player/diy.js               server/match/player/economy.js
     server/sim/spec.js                       server/sim/content/bands/meta.js
     server/sim/garrisons/battle.js
@@ -236,6 +236,17 @@
     □ 休整期加时投票：按钮出现、半数通过后倒计时 +30/+60s、每期只能加一次 ✅ 2026-10-28
     □ 联防跳过投票：半数通过后按在场敌人数扣血、场上敌人清除、不发放资金/击杀、
       结算后正常进入下一轮休整期（不重复结算、不再开一轮联防）✅ 2026-10-28
+    □ 战斗倍速投票（2026-10-29）：
+      □ 队伍面板顶部常驻「战斗 ×1」徽章，点击展开「申请 2 倍速」✅
+      □ 半数通过后 gameSpeed ×2，战斗/联防/boss 三阶段动画明显变快（休整期不变）✅
+      □ ×2 状态下徽章变薄荷绿并显示「战斗 ×2」，点击展开「申请 1 倍速」✅
+      □ 回 1× 后 gameSpeed 精确还原为开局原速（不是再乘 0.5）✅
+      □ 战斗进行中（非 PREP）无法申请（展开区显示「仅休整期可申请」）✅
+      □ 当前倍数等于目标倍数时服务端拒绝（不会白开一个投票）✅
+    □ 投票重复提交限制（2026-10-29）：
+      □ 申请人发起后再次点「同意」→ 服务端返回 already voted，计数不增加 ✅
+      □ 已拒绝者再点「拒绝」→ 同样被拒 ✅
+      □ UI 已答复者只显示「你已同意/你已拒绝」，不再显示按钮 ✅
     □ 6 人以上悬赏选择分组 UI 正常（A组/B组按钮、进度、倒计时）
     □ 各分组玩家进悬赏界面默认显示自己分组
     □ 分组悬赏人机正常选择、超时正常触发
@@ -251,6 +262,15 @@
     disableFlying/bossHitLimit/capacity 三条核心链路完整
     setupVote.js _rerollStartAt.clear() 已补上
     所有 C2S 消息注册点验证通过
+
+  L1 链路追踪（2026-10-29 补充：gameSpeed 倍速链路，全为只读复用，无核心层改动）
+    gameSpeed 写入：Match.js 构造时初始化 + clamp（MAX_GAME_SPEED=200）✅
+    gameSpeed 读取①：combat.js / unitePhase.js / bossRounds.js 折算 deadline ✅
+    gameSpeed 读取②：clientCombat.js _startMsg → b.start.speed ✅
+    gameSpeed 读取③：客户端 runner.js 按 b.start.speed 播放动画 ✅
+    写入方：mods/玩法/20p/overrides/server/match/match/votes.js _applySpeedUp ✅
+    不受影响：休整期倒计时（prepDeadline）、选阵倒计时（各自 turnTimer）✅
+    → 结论：倍速仅作用于 COMBAT / 联防 / boss 三阶段，链路闭合
 
   ═══ Mod B：clementia ═══
 
@@ -320,19 +340,27 @@
   0fe9f23                      Merge branch 'main'：文档版本号与 v1.2 对齐
   (HEAD)                      docs: 合并两侧「最后更新」说明
 
-  ── 未提交的工作树改动（2026-10-26 第二轮测试修复）──
+  ── 未提交的工作树改动（2026-10-29 战斗倍速投票 + 投票重复提交守卫）──
 
-  核心层（Stronghold-Protocol/ 内，直接修改上游文件）：
-    public/sw.js                          [16] SW fetch 3次重试 + cache: 'no-store' 降级
-    public/js/render/board3d/load.js      [17] fetchWithRetry + loadScenePack 3次重试
-    server/http/files.js                  [18] .bin 从 COMPRESSIBLE 移除
+  核心层（Stronghold-Protocol/ 内）：本轮无新增改动
+    ⚠ 重要：倍速是通过复用上游已有的 gameSpeed 字段实现的，未修改任何上游文件
+      · server/match/match/clientCombat.js 的 _startMsg 已自带 speed: this.gameSpeed
+      · public/js/battle/runner.js 已按 b.start.speed 控制本地动画播放速度
+      · combat.js / unitePhase.js / bossRounds.js 的 deadline 都读 gameSpeed
+      → 结论：倍速功能 100% 落在 mod 层，上游升级不会因该功能产生冲突
 
   Mod 层（mods/玩法/20p/ 内）：
-    overrides/server/match/match/unitePhase.js  新增：联防多轮推进（_uniteNextOrSettle）
-    overrides/server/match/match/spDraft.js     修改：分组模式统一30s计时（spFirst）
-    public/js/ui/choiceOverlay.js               修改：pickSp 统一判断 + turnPid 字段映射
-    public/js/ui/teamPanel.js                   修改：导航移到顶部 + 左右箭头 + pointer-events
-    public/css/screens/game.css                 修改：.team__nav 样式优化（背景/圆角/文本醒目）
-
-  待修复：
-    public/css/screens/sweep.css          ⚠ Git 冲突标记残留（16处 <<<<<<< HEAD）
+    overrides/server/match/match/votes.js     修改：新增 requestSpeedUp/voteSpeedUp/
+                                                    _applySpeedUp + SPEED_MULS={1,2}
+                                                    + _openVote 统一收口
+                                                    + 重复投票守卫（already voted）
+                                                    + 移除 _speedMulApplied 单次限制
+    overrides/server/match/match/views.js     修改：speedUpVote 增加 mul 字段；
+                                                    移除 speedUpDone；新增 speedMul
+    overrides/server/match/match/platform.js  修改：VOTE_TYPES 从四条扩到六条
+    overrides/shared/protocol.js              修改：新增 g.speedUp / g.speedUpVote 校验
+                                                    （mul ∈ {1,2}）
+    public/js/ui/teamPanel.js                 修改：新增 SpeedBadge（可点击倍速区）
+                                                    + VotePanel 移除倍速按钮
+                                                    + 已答复者不再显示投票按钮
+    public/css/screens/game.css               修改：新增 .team__speed 系列样式

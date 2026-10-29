@@ -586,12 +586,14 @@ export const C2S = {
   // match
   'g.infoReady': { setupRevision: (v) => isInt(v, 0, 2 ** 31), $optional: ['setupRevision'] },
   'g.rerollVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
-  // 20p: the two majority votes (server/match/match/votes.js) — any seated human proposes, half of the humans passes.
-  // 休整期加时: seconds is 30 or 60; 联防跳过: no payload at all.
+  // 20p: the majority votes (server/match/match/votes.js) — any seated human proposes, half of the humans passes.
+  // 休整期加时: seconds is 30 or 60; 联防跳过: no payload; 战斗倍速: mul is the animation-clock factor it asks for (1 or 2).
   'g.prepExtend': { seconds: (v) => isInt(v, 30, 60) && (v === 30 || v === 60) },
   'g.prepExtendVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
   'g.uniteSkip': {},
   'g.uniteSkipVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
+  'g.speedUp': { mul: (v) => v === 1 || v === 2 },
+  'g.speedUpVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
   'g.band': { bandId: isId },
   'g.bandSkip': {},
   // the strategy highlighted in the draft screen (user playtest #4 item 4): a turn that runs out takes it while it is

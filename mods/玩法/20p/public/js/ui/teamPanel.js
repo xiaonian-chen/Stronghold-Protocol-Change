@@ -172,6 +172,7 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
     onWatch(p);
   };
   return html`<aside class=${cx('team', compact && 'team--compact')} aria-label=${t('同盟成员')}>
+    <${SpeedBadge} pub=${pub} myId=${myId} />
     ${showNav ? html`<div class="team__nav">
       <button type="button" class="team__nav-btn" onClick=${navPrev} aria-label=${t('上一组')}>◀</button>
       <span class="team__nav-info">${page + 1}/${totalPages}</span>
@@ -227,10 +228,79 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
 }
 
 /**
- * 20p: the two majority votes (server/match/match/votes.js) — 休整期加时 in PREP (+30 s / +60 s) and 联防跳过 in UNITE.
- * Any seated human may propose; the proposer counts as one agreeing vote and half of the humans passes it. The server
- * publishes the open vote on m.public (prepExtendVote / uniteSkipVote) only while the round / 联防 it was opened for is
- * the current one, so a stale vote can never show here. `prepExtendDone` hides the buttons once this prep took one.
+ * 20p: the 战斗倍速 area (server/match/match/votes.js) — the match-long animation-clock factor, shown in every phase
+ * from PREP to the result so the whole table always sees what pace the battle runs at. The header is the only entry
+ * to the vote: clicking it unfolds 申请 2 倍速 at ×1 and 申请 1 倍速 at ×2 (the vote is the only way the factor moves),
+ * and an open speed vote unfolds it on its own so nobody misses it. `speedMul` is a plain m.public field, so late
+ * joiners and spectators read it too; only a seated human may propose or answer (the server guards it as well).
+ * @param {{ pub: any, myId: string }} props
+ */
+function SpeedBadge({ pub, myId }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const vote = pub?.speedUpVote || null;
+  const mul = Number(pub?.speedMul) || 1;
+  const lastVoteId = useRef(null);
+  useEffect(() => {
+    if (vote && vote.id !== lastVoteId.current) setOpen(true);
+    lastVoteId.current = vote ? vote.id : null;
+  }, [vote?.id]);
+  if (!pub) return null;
+  const me = (pub.players || []).find((p) => p.playerId === myId);
+  const seated = !!me && !me.isBot && me.status !== 'left';
+  const canAsk = seated && pub.phase === PHASE.PREP;
+  const total = vote?.voters?.length || 0;
+  const agreed = vote?.agreed?.length || 0;
+  const answered = vote ? (vote.agreed.includes(myId) ? 'agree' : vote.declined.includes(myId) ? 'decline' : null) : null;
+  const send = (fn) => {
+    if (pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    Promise.resolve().then(fn).catch(() => {}).finally(() => { pending.current = false; setBusy(false); });
+  };
+  const answer = (agree2) => send(() => act('g.speedUpVote', { voteId: vote.id, agree: agree2 }));
+  return html`<div class=${cx('team__speed', mul > 1 && 'is-fast')}>
+    <button type="button" class="team__speed-head" aria-expanded=${String(open)} title=${t('战斗倍速：战斗、联防、boss 阶段动画速度')}
+      onClick=${() => setOpen((v) => !v)}>
+      <${GIcon} name="sword" class="team__speed-icon" />
+      <span class="team__speed-txt">${t('战斗 ×{mul}', { mul })}</span>
+      ${vote ? html`<span class="team__speed-count">${agreed}/${total}</span>` : null}
+      <span class="team__speed-caret">${open ? '▴' : '▾'}</span>
+    </button>
+    ${open ? html`<div class="team__speed-body">
+      ${vote ? html`
+        <div class="team__speed-btns">
+          ${!seated ? html`<span class="team__speed-note">${t('观战中，无法投票')}</span>`
+            : answered ? html`<span class="team__speed-note">${answered === 'agree' ? t('你已同意') : t('你已拒绝')}</span>`
+            : html`
+              <button type="button" class="btn btn--primary btn--sm" disabled=${busy} onClick=${() => answer(true)}><span class="btn__label">${t('同意')}</span></button>
+              <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => answer(false)}><span class="btn__label">${t('拒绝')}</span></button>
+            `}
+        </div>
+        <div class="team__vote-hint">${t('半数玩家同意即把战斗、联防、boss 动画调至 {mul} 倍速', { mul: vote.mul })}</div>
+      ` : html`
+        <div class="team__speed-btns">
+          ${canAsk ? html`
+            <button type="button" class="btn btn--secondary btn--sm" disabled=${busy}
+              onClick=${() => send(() => act('g.speedUp', { mul: mul === 2 ? 1 : 2 }))}>
+              <span class="btn__label">${mul === 2 ? t('申请 1 倍速') : t('申请 2 倍速')}</span>
+            </button>
+          ` : html`<span class="team__speed-note">${t('仅休整期可申请调整战斗倍速')}</span>`}
+        </div>
+        <div class="team__vote-hint">${t('半数玩家同意即生效，本局内只通过这里调整')}</div>
+      `}
+    </div>` : null}
+  </div>`;
+}
+
+/**
+ * 20p: the two remaining majority votes (server/match/match/votes.js) — 休整期加时 in PREP (+30 s / +60 s) and 联防跳过
+ * in UNITE (the 战斗倍速 vote lives in its own area above, SpeedBadge). Any seated human may propose; the proposer
+ * counts as one agreeing vote and half of the humans passes it. The server publishes the open vote on m.public
+ * (prepExtendVote / uniteSkipVote) only while the round / 联防 it was opened for is the current one, so a stale vote
+ * can never show here. A seat answers once — the proposer already counted, so it sees 你已同意 instead of the buttons.
+ * `prepExtendDone` hides the buttons once this prep took one.
  * @param {{ pub: any, myId: string }} props
  */
 function VotePanel({ pub, myId }) {
@@ -251,6 +321,7 @@ function VotePanel({ pub, myId }) {
   const answer = (agree) => send(() => act(prep ? 'g.prepExtendVote' : 'g.uniteSkipVote', { voteId: vote.id, agree }));
   const total = vote?.voters?.length || 0;
   const agreed = vote?.agreed?.length || 0;
+  const answered = vote ? (vote.agreed.includes(myId) ? 'agree' : vote.declined.includes(myId) ? 'decline' : null) : null;
   return html`<div class="team__vote">
     ${vote ? html`
       <div class="team__vote-head">
@@ -258,10 +329,12 @@ function VotePanel({ pub, myId }) {
         <span class="team__vote-count">${agreed}/${total}</span>
       </div>
       <div class="team__vote-btns">
-        <button type="button" class="btn btn--primary btn--sm" disabled=${busy} onClick=${() => answer(true)}><span class="btn__label">${t('同意')}</span></button>
-        <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => answer(false)}><span class="btn__label">${t('拒绝')}</span></button>
+        ${answered ? html`<span class="team__speed-note">${answered === 'agree' ? t('你已同意') : t('你已拒绝')}</span>` : html`
+          <button type="button" class="btn btn--primary btn--sm" disabled=${busy} onClick=${() => answer(true)}><span class="btn__label">${t('同意')}</span></button>
+          <button type="button" class="btn btn--secondary btn--sm" disabled=${busy} onClick=${() => answer(false)}><span class="btn__label">${t('拒绝')}</span></button>
+        `}
       </div>
-      <div class="team__vote-hint">${t('半数玩家同意即生效')}</div>
+      <div class="team__vote-hint">${prep ? t('半数玩家同意即延长本次休整期') : t('半数玩家同意即立刻结算：未消灭的敌人照常扣血')}</div>
     ` : html`
       <div class="team__vote-btns">
         ${prep ? html`
