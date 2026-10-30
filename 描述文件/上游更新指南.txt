@@ -1,6 +1,8 @@
 ===========================================================
   上游更新指南 — Git 版（五层完整流程）
-  最后更新：2026-10-29
+  最后更新：2026-10-31（新增「版本主机钩子继承」检查点：
+                         第一层冲突清单含 server/match/host/index.js，
+                         1.5 符号依赖表登记 fork/execArgv）
 ===========================================================
 
 描述文件协作关系（四文件分工）：
@@ -16,6 +18,7 @@
   非上游文件功能记录.txt
     → 所有非上游文件基于上游添加了什么内容和功能
     → 按 mod-framework/20p/clementia/clone/dupBand 分节
+    → 七附：版本数据集补全工具（_patch_versions.mjs / _patch_diy.mjs）
     → 每个文件标注"更新上游时注意"必须保留的逻辑
     → 其中"依赖上游符号"的条目，汇总为本指南 1.5 的符号依赖表
     → 第九节：功能保留检查总清单
@@ -23,7 +26,8 @@
   功能适配经验.txt
     → 按 mod 归类问题排查与解决方案
     → 【一】mod-framework 【二】20p 【三】clementia 【四】clone
-    → 【六】通用经验速查  【七】测试问题汇总
+    → 【六】通用经验速查  【七】测试问题汇总（第八轮 = 版本干员池补全，
+                                                       第九轮 = 版本主机钩子继承）
     → 遇到同类问题时速查经验
 
 项目结构分五层，在上游更新时必须逐层递进：
@@ -148,7 +152,7 @@
 ───────────────────────────────────────────────
 
   ★ 参考文件：
-    · 核心层改动记录.txt → 第一层：列出所有可能冲突的 22 个文件及保留策略
+    · 核心层改动记录.txt → 第一层：列出所有可能冲突的 42 个文件及保留策略
     · 非上游文件功能记录.txt → 各 mod 节：上游更新时功能保留检查清单
 
   ── 1.0 发现新版本 ──
@@ -169,14 +173,21 @@
 
   ── 1.3 解决冲突（如有）──
 
-    只有我们修改过的 12 个文件可能出现冲突：
+    只有我们修改过的 14 个文件可能出现冲突：
       server/lobby.js              scripts/launch.mjs
       server/match/Match.js        server/match/match/phases.js
-      server/match/player/economy.js   server/match/finalAssault.js
+      server/match/host/index.js   server/match/player/economy.js
+      server/match/finalAssault.js
       server/sim/content/bands/meta.js
       public/js/ui/detailPanel.js  public/js/render/app.js
       data/garrisons.json          shared/constants.js
       public/css/screens/sweep.css  public/js/ui/hud.js
+
+    其中 server/match/host/index.js 的冲突是 2026-10-31 新增的
+    （版本主机 fork 追加父进程 --import 钩子），合并时必须保留
+    inheritedImportFlags / importFlagValue 及 kind === 'version' 分支的
+    钩子追加；若上游改用了 worker 或新的启动封装，要把同样的传递接回去，
+    否则三个非默认版本会静默退回原版（详见核心层改动记录 [25]）。
 
     解决策略见下方「冲突处理指南」。
     解决完后：git add . ; git commit -m "merge upstream v0.3.2"
@@ -233,11 +244,15 @@
       _uniteLeft        overrides/match/unitePhase.js         20p votes.js 跳过扣血
       b.start.speed     server/match/match/clientCombat.js    倍速客户端表现（只读）
       _startMsg         server/match/match/clientCombat.js    倍速客户端表现（只读）
+      fork() 参数       server/match/host/index.js             版本主机启动（钩子传递依赖）
+      execArgv          server/match/host/index.js             版本主机启动（--import 追加位置）
 
     核对方法（PowerShell）：
       $old = 'v0.3.2'; $new = 'v0.3.3'
-      git diff $old..$new -- server/match/Match.js server/match/match/clientCombat.js
-      # 重点看 gameSpeed / humans / setDeadline / settle 是否被重命名或改签名
+      git diff $old..$new -- server/match/Match.js server/match/match/clientCombat.js `
+                            server/match/host/index.js
+      # 重点看 gameSpeed / humans / setDeadline / settle / fork 参数 / execArgv
+      # 是否被重命名或改签名
 
     判定：
       · 符号仍在且签名未变 → 该功能无需适配，跳过
@@ -256,8 +271,9 @@
     · 核心层改动记录.txt → 第二层：需检查的非上游文件清单（mod-framework/public/ + 各 mod A-type）
     · 非上游文件功能记录.txt → 各 mod 节：每个 A-type/B-type 文件基于上游添加了什么逻辑，
                              "更新上游时注意"标注必须保留的内容
-    · 功能适配经验.txt → 1.3/1.4：版本漂移排查经验（B-type 不报错但 UI 异常、
+    · 功能适配经验.txt → 1.2/1.3：版本漂移排查经验（B-type 不报错但 UI 异常、
                                              A-type 误覆盖导致功能丢失）
+    · 功能适配经验.txt → 1.4：版本主机子进程不继承 --import（切版本后 mod 静默失效）
     · 功能适配经验.txt → 2.22~2.26：倍速投票暴露的"增量状态漂移 / 阶段边界 /
                                       上游符号复用"三类新经验
     · 1.5 产出的「上游符号依赖表」：清单内文件若命中表中符号，优先核对
@@ -425,7 +441,7 @@
     - game.js：旧版缺少 DRAFT_HOLD_MS/BOOT_MIN_MS → 协议启动动画时序异常
     - room.js：缺少 VersionTag → 房间版本标签不显示
     - room.css：缺少 .rs-clock__ver 等新样式 → 版本标签样式缺失
-    详见「功能适配经验.txt → 1.7 和 1.8」
+    详见「功能适配经验.txt → 【零】0.1（mod-framework/public/ 文件版本漂移）」
 
 
 ───────────────────────────────────────────────
@@ -446,6 +462,13 @@
     v0.3.3 实战：上游仅 bugfix（装备槽位/图标缓存/bench swap），
     不涉及插件架构 → 3.1 通过即完成本层。
 
+    ★ 例外：只要 1.4 改动清单里出现 plugins/plugin-skins/ 任何文件，
+      3.3 插件素材完整性不能跳过（我们改过该插件本体，必冲突）
+
+    ★ 例外：只要 1.4 改动清单里出现 server/match/host/index.js、
+      scripts/launch.mjs 或 scripts/20p-loader.mjs，3.5 版本主机钩子继承不能跳过
+      （漏接就是三个非默认版本整版本退回原版，且不报错）
+
   ── 3.1 启动服务器，确认无报错 ──
 
     启动后看控制台，应无 SyntaxError / ReferenceError。
@@ -460,11 +483,66 @@
     □ 房间版本标签（VersionTag）正常显示
     □ 协议启动动画时序正常（DRAFT_HOLD_MS / BOOT_MIN_MS）
 
+  ── 3.3 插件素材完整性（plugin-skins，2026-10-30 起必查）──
+
+    ★ 这一层我们改过上游插件本体，上游只要动 plugin-skins 就会 CONFLICT
+
+    □ node tools/plugin.mjs check plugin-skins --strict → 0 problem / 0 warning
+    □ plugin.json 仍为 193 干员 / 299 时装（上游若也扩充，按 charId/skinId 取并集）
+    □ plugin.lock.json 是 pack 生成的 394 Spine models（不要手工合并）
+      取并集后必须重跑：node tools/plugin.mjs pack plugin-skins
+    □ 插件体积 ≤ 200 MB（当前 192.8 MB，余量仅 7.2 MB）
+      超限时对 PNG 无损重压，见 功能适配经验.txt → 5.5
+    □ 游戏内打开外观插件，抽查新干员（如 char_473_mberry）时装可切换、正反面正常
+    □ nlc#1 三套（swire2 / blaze2 / shu）若客户端已下发，重跑提取脚本补齐
+
     ★ 以上均为 L2（运行时测试），必须由用户实际操作 UI 确认
       L1（链路追踪）：逐节点确认字段名/类型/映射关系，修复所有链路断点
       L2（运行时测试）：实际操作 UI 确认功能表现
       正确流程：AI 做 L1 → 修复断点 → 用户做 L2 确认
       详见功能适配经验.txt → 【六】#28-#32 验证方法论
+
+  ── 3.4 版本数据集完整性（2026-10-30 起必查）──
+
+    ★ 我们补过 data/versions/ 下三个非默认版本的数据集，上游只要重发版本数据就必 CONFLICT
+
+    □ node _patch_diy.mjs verify
+      → act1autochess / act1autochess-v1_1 / act2autochess-v2_1 均 0 problems
+    □ 三个版本自选池与本版本 roster 无重叠（legal6 !roster.has(id)）
+      重叠会让同一 token 同时进 tokens.json 与 backups.tokens，validateReferences 报错
+    □ 每个 DIY 槽位状态都有对应 forms 与召唤物变体 <charId>@<statusKey>
+    □ 房间切到各非默认版本，自选编队选克莱门莎 / 珊比加等新增干员不报错
+      （否则报 no form for chess_xxx）
+    □ node --test test/data.test.js test/data-versions.test.js test/versions-keying.test.js
+    □ node --test test/versions-golden.test.js（diy 基线场景数须与补丁后自选池匹配）
+
+    ★ 上游重发版本数据时的处置顺序（不要手改 JSON）：
+      1) git checkout 上游新版 data/versions/
+      2) node _patch_versions.mjs        （补名单：units / ownedPool / operators / garrison）
+      3) node _patch_diy.mjs patch       （按官方 build-data 规则补 forms / variants / 规范化自选池）
+      4) node _patch_diy.mjs verify      （必须 0 problems）
+      5) node tools/golden.mjs --family diy --update   （只重算 diy 族，其余五族不动）
+      6) node --test test/versions-golden.test.js
+
+    ★ 详见 功能适配经验.txt → 【七】第八轮；工具说明见 非上游文件功能记录.txt → 七附
+
+  ── 3.5 版本主机钩子继承（2026-10-31 起必查）──
+
+    ★ 我们改过 server/match/host/index.js，让三个非默认版本的子进程继承
+      父进程的 --import（20p-loader.mjs 模块解析钩子）。上游只要动这个文件的
+      fork 参数或启动方式就必 CONFLICT，且一旦漏接就是"整版本退回原版"
+
+    □ 版本子进程 execArgv 含父进程的 --import（路径已转绝对 file:// URL）
+    □ forkSandbox 沙箱分支仍不传钩子（--permission 安全模型）
+    □ node --test test/match/version-host.test.js 全文件 8 项通过
+      （第 8 项为 inheritedImportFlags 的 9 组边界断言）
+    □ 房间切到 act1autochess / act1autochess-v1_1 / act2autochess-v2_1，
+      20p / clementia / clone / dupBand 全部生效（不是原版 4 人玩法）
+    □ m.public 的 sp.groups 字段在版本房间里存在（钩子生效的端到端标记）
+
+    ★ 判定口诀：默认版本正常但切版本回原版 → 先查子进程 execArgv，
+      再确认 lobby 是否会拦（room.modded 只对 content plugin 为 true，
+      不拦 = 静默退化）。详见 功能适配经验.txt → 【一】1.4
 
 
 ───────────────────────────────────────────────
@@ -476,7 +554,7 @@
     · 非上游文件功能记录.txt → 第二节：框架各组件功能说明（patcher/modHook/gen-patches/
                              check-patches/modManager/modServer）
     · 功能适配经验.txt → 【一】mod-framework：1.1 禁用崩溃、1.2 override 冲突、
-                             1.3 版本漂移、1.5 组件未生效
+                             1.3 组件未生效、1.4 版本主机不继承 --import
 
   插件功能确认后，检查 mod 框架各组件是否正常工作。
 
@@ -607,6 +685,8 @@
       □ 各分组玩家进悬赏界面默认显示自己分组
       □ 分组悬赏人机正常选择、超时正常触发
       □ sweep 报告界面显示正常
+      □ 切到三个非默认版本，以上 20p 功能全部照常（版本房间继承 --import 钩子，
+        见 3.5 与 功能适配经验.txt →【一】1.4）
 
   ═══ Mod B：clementia（5 个 overrides + 3 个核心文件）═══
 
@@ -636,6 +716,8 @@
       □ 进入战斗后击杀计数正常，盟约能叠加
       □ 战斗面板显示阿戈尔+不屈+迅捷/突袭（非单阿戈尔）
       □ 非精锐特质每 3 击杀 +1 层，精锐每 3 击杀 +2 层
+      □ 切到三个非默认版本，改版模式可选、额外盟约与叠层特质照常
+        （各版本自己的 garrisons.json 已带 kills_a/b，子进程不重写数据）
 
   ═══ Mod C：dupBand（1 个核心文件 + 复用 20p 的 2 个 overrides）═══
 
@@ -656,6 +738,7 @@
     验证：
       □ 创建 dupBand 房间时不会报 invalid game mode
       □ 进入乐队选择，队友可以选和他人重复的策略
+      □ 切到三个非默认版本，队友仍可选重复策略（版本房间继承钩子）
 
   ═══ Mod D：clone（纯钩子，零上游修改）═══
 
@@ -664,6 +747,7 @@
     验证：
       □ clone 房间可创建
       □ 进入游戏 4 人选牌相同
+      □ 切到三个非默认版本，倾向格与共享阵容照常（版本房间继承钩子）
 
 
 ===========================================================
@@ -688,6 +772,7 @@
      server/match/match/phases.js    保留 hook emit
      server/match/finalAssault.js    保留 bossHp hook
      server/sim/content/bands/meta.js  保留 duckReplace hook
+     server/match/host/index.js   保留 inheritedImportFlags + 版本 fork 追加 --import
      scripts/launch.mjs           保留 20p-loader --import 入口
      public/js/ui/detailPanel.js  保留 desc||descRaw（非 descRaw||desc）
      public/js/render/app.js      保留 ++layerPopSeq + _flags 透传
@@ -707,7 +792,7 @@
 ===========================================================
 
 上游 update.js 可能检查 MANIFEST.json 文件完整性（SHA-256）。
-因为我们修改了 10 个核心文件，MANIFEST 校验会失败。
+因为我们修改了多个核心文件（清单见核心层改动记录.txt 第一层），MANIFEST 校验会失败。
 
   方案 A（推荐）：删除 MANIFEST.json，服务器通常不强制检查
   方案 B（备用）：正常走 git merge 流程，无需额外操作
@@ -766,7 +851,94 @@
 
 
 ===========================================================
-  近期变更记录（2026-10-27）
+  近期变更记录（2026-10-31）
+
+16. 版本主机钩子继承 + 文档口径统一（2026-10-31）
+    背景：默认版本（第二期下半）四个 mod 全部正常，但切到
+          act1autochess / act1autochess-v1_1 / act2autochess-v2_1 后
+          全部退回原版 4 人玩法，无任何报错
+
+    根因：非默认版本由 server/match/host/index.js 的 fork() 启动子进程，
+          该 fork 显式写死 execArgv（只有 --max-old-space-size），
+          父进程 scripts/launch.mjs 的 --import（20p-loader.mjs 模块解析钩子）
+          不会自动继承 → 子进程不加载任何 mod overrides；
+          lobby 层也不会拦（room.modded 只对 content plugin 为 true），
+          属"静默退化"
+
+    修复（核心层 1 个文件 + 1 个测试）：
+      server/match/host/index.js
+        新增导出 inheritedImportFlags(argv = process.execArgv) / importFlagValue(v)
+        识别 --import x 与 --import=x；路径经 pathToFileURL(path.resolve(v))
+        转绝对 file:// URL，裸包名原样保留，缺值跳过
+        kind === 'version' 的 fork 在 execArgv 末尾追加这些钩子
+        forkSandbox 沙箱分支刻意不传（--permission 安全模型）
+      test/match/version-host.test.js
+        全文件 8 项测试；第 8 项为 inheritedImportFlags 的 9 组边界断言
+        （空 argv / 无关参数 / 分离式 / --import= / 相对路径 / 绝对 URL /
+         裸包名 / 缺值 / 多钩子顺序）
+      scripts/20p-loader.mjs / docs/design/match.md
+        仅注释与文档同步，无逻辑改动
+
+    设计取舍：不拆两套逻辑。默认版本走本进程，非默认版本子进程继承同一条
+              钩子链，所有版本共用一份 mod overrides
+
+    文档同步（四文件）：
+      核心层改动记录 → 第一层 [25]/[26] + 第三层 3.5 检查清单 + 第五层各 mod 验证项
+      非上游文件功能记录 → 七 [25] + 九 检查清单 + 三/四/五/六节文件条目
+      功能适配经验 → 【一】1.4 + 通用经验 45/46 + 【七】第九轮
+      本指南 → 1.3 冲突清单 + 1.5 符号依赖表 + 3.5 检查点
+      四个 mod 的 功能描述.txt + README → 统一「适用范围」段，
+        旧结论"改版内容只在默认版本生效"作废
+
+    验收：test/match/version-host.test.js 全文件 8 项通过
+          （第 8 项 9 组 --import 边界断言）；tools/check-imports.mjs 无新增违规；
+          默认版本行为零变化
+
+15. 版本数据集补全 + 测试闭环（2026-10-30）
+    背景：第一期上/下半（act1autochess / act1autochess-v1_1）与第二期上半
+          （act2autochess-v2_1）的自选池落后于默认版本（第二期下半），
+          新增干员（克莱门莎 char_4231_clemnt、珊比加 char_4235_thumpy 等）
+          在这些版本的自选列表里选不到；强行补名单后自选校验报
+          no form for chess_char_6_diy1_a
+
+    新增工具（Stronghold-Protocol/ 根目录，A-type，零侵入不改任何源码）：
+      _patch_versions.mjs  补名单层：units / diy.ownedPool / diy.operators / garrisons
+      _patch_diy.mjs       补表单层：按官方 build-data 规则生成 forms 与召唤物变体
+                           模式：check（默认）/ patch / verify
+
+    关键规则（严格对齐官方 tools/build-data.mjs）：
+      · 表单归属：stand-in 补位干员 → 所有引用它的 chess 状态；
+                  DIY 原型干员 → 它服务的 tier 全部 slot 及 golden 状态；
+                  owned 自选池干员 → 全部 DIY 槽位状态
+      · 自选池规范化 legal6 `!roster.has(id)`：剔除与本版本 roster 重叠的干员
+      · buildDiyTokens：只给自选干员的召唤物生成 backups.tokens 变体，绝不写 tokens.json
+
+    执行结果：
+      版本                           units  tokens  自选池  与 roster 重叠
+      ─────────────────────────────────────────────────────────────────────
+      act1autochess                   101     43      84        0
+      act1autochess-v1_1              101     43      84        0
+      act2autochess-v2_1               93     39      76        0
+      （默认版本第二期下半              89     38      72        0）
+      node _patch_diy.mjs verify → 三个版本均 0 problems
+
+    测试同步：
+      · test/golden/*/diy.json 按补全后的自选池重生成：112 / 111 / 138 场景
+        0 引擎错误 / 0 abyss 违规（其余五族 roster/bonds/fields/matches/standins 零变化）
+      · test/data.test.js effect key 43 → 44（clementia 两条 garrison 共用同一 effect key）
+      · test/helpers/versionReplay.mjs / versionEquipment.mjs 屏蔽子进程 console，
+        versionEquipment 改 process.stdout.write 输出纯 JSON
+      · mod-framework/modManager.js：tools/ 下 CLI 脚本运行时过滤 [mod:] 日志
+      · mods/扩展角色/clementia/index.js：启动幂等化（garrisonsAlreadyLoaded + 内容相等判断），
+        版本主机启动 6s → 1s 级；备份迁到 .cache/clementia/
+
+    验收：
+      14 个版本/数据测试文件串行 → 212 tests / 203 pass / 0 fail / 9 skipped
+      剩余失败均为环境/上游既有问题（无 eslint、Windows 临时目录 cpSync EIO、
+      node --test 并行资源竞争），与本次补丁无关联
+
+    文档同步：核心层改动记录 [20]-[24] / 非上游文件功能记录 七附 + 九 /
+              功能适配经验 【七】第八轮 / 本指南 3.4
 
 14. v0.3.3 上游适配 + 流程优化（2026-10-27）
     五层流程执行结果：
@@ -1022,7 +1194,7 @@
     - 全量排查：对所有非原版上游文件做版本基准检查（行数对比+特征grep+哈希校验）
       确认 8 个文件与上游一致、2 个中风险文件无关键功能缺失
     - 新增流程步骤：第二层 全量版本漂移排查（核心合并后立即执行）
-    - 详见「功能适配经验.txt → 1.7 和 1.8」
+    - 详见「功能适配经验.txt → 【零】0.1 / 0.2 / 0.3 / 0.4 / 0.5」
 
 11. 第二层优化为"git 清单导向"的增量排查（日期见文件头部最后更新）
     - 问题：第二层原为"全量排查"，需对所有非上游文件做行数对比/哈希校验，

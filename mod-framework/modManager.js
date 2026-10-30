@@ -21,6 +21,19 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import modHook from './modHook.js';
 
+// tools/ CLIs (tools/plugin.mjs check --json, …) import server modules, and modHook.js auto-loads this loader, so a
+// tool's stdout would otherwise carry mod chatter — and its `--json` output is parsed by callers. When this process
+// was started from a tools/ script, drop the `[mod:…]` / `[modManager] …` lines; everything else still prints.
+const _fromCliTool = /[\\/]tools[\\/][^\\/]+\.(mjs|js)$/.test(process.argv[1] ?? '');
+if (_fromCliTool) {
+  const _log = console.log;
+  console.log = (...args) => {
+    const first = args[0];
+    if (typeof first === 'string' && (first.startsWith('[mod:') || first.startsWith('[modManager]'))) return;
+    _log(...args);
+  };
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dir = path.dirname(__filename);
 

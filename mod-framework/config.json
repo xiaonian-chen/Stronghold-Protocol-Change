@@ -1,9 +1,9 @@
 {
-  "clone": false,
+  "clone": true,
   "cloneBossMult": 4,
   "cloneDuckMax": 3,
   "cloneBondSlots": 2,
-  "20p": false,
-  "dupBand": false,
-  "clementia": false
+  "20p": true,
+  "dupBand": true,
+  "clementia": true
 }

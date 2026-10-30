@@ -12,8 +12,9 @@
 // Hooks:
 //  - onLoadData   Inject garrison data records (garrison_clementia_kills_a/b) before deep-freeze
 
-import { onLoadData } from '../../../Stronghold-Protocol/server/data.js';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { getData, onLoadData } from '../../../Stronghold-Protocol/server/data.js';
+import { DEFAULT_VERSION, versionOfData } from '../../../Stronghold-Protocol/shared/versions.js';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -75,20 +76,67 @@ onLoadData((data) => {
 export function install(modHook) {
   console.log('[mod:clementia] 克莱门莎 mod 已激活');
 
+  // A match host process runs one official version's content set, installed with setData: this mod's reload and
+  // client garrison file belong to the server process (the default data set) only.
+  if (!runsDefaultDataSet()) {
+    console.log('[mod:clementia] version host data set; garrison reload skipped');
+    return;
+  }
+
   // Generate client-side garrison data file so the UI trait bar can display our garrison
   generateClientGarrisonData();
 
   // getData() / loadData() already ran before mods were loaded (called by simdata.js top-level await).
-  // The onLoadData hook registered above was NOT fired. We must trigger a reload now.
+  // The onLoadData hook registered above was NOT fired, so the reload below injects our garrison records. When the
+  // loaded data set already carries the latest records (data/garrisons.json is kept up to date), a reload would only
+  // re-read every data file and reload the sim cache again: skip it and leave the data set as it is.
+  if (garrisonsAlreadyLoaded()) {
+    console.log('[mod:clementia] garrison data already loaded; reload skipped');
+    return;
+  }
   // Start async reload in the background; it completes well before the first match starts.
   triggerDataReload();
 }
 
+/** True when this process's data set already holds the latest garrison records (injected or read from data/). */
+function garrisonsAlreadyLoaded() {
+  try {
+    const g = getData().garrisons;
+    const same = (a, b) => !!a && JSON.stringify(a) === JSON.stringify(b);
+    return same(g?.garrison_clementia_kills_a, garrisonA) && same(g?.garrison_clementia_kills_b, garrisonB);
+  } catch {
+    return false;
+  }
+}
+
+/** True in the server process (default data set); false in a match host running another version's data. */
+function runsDefaultDataSet() {
+  try {
+    return versionOfData(getData()) === DEFAULT_VERSION;
+  } catch {
+    return true;
+  }
+}
+
 function generateClientGarrisonData() {
   try {
-    const projectDataDir = resolve(__dirname, '..', '..', '..', 'Stronghold-Protocol', 'data');
+    const projectDir = resolve(__dirname, '..', '..', '..', 'Stronghold-Protocol');
+    const projectDataDir = resolve(projectDir, 'data');
     const originalPath = resolve(projectDataDir, 'garrisons.json');
-    const backupPath = resolve(projectDataDir, 'garrisons_original.json');
+    // The backup belongs outside data/: the server indexes every JSON under data/ as one of the built data files
+    // (`/data/<name>.json?v=…`), so a backup kept there is served as a 17th record.
+    const backupDir = resolve(projectDir, '.cache', 'clementia');
+    const backupPath = resolve(backupDir, 'garrisons_original.json');
+    const legacyBackupPath = resolve(projectDataDir, 'garrisons_original.json');
+    if (existsSync(legacyBackupPath)) {
+      if (!existsSync(backupPath)) {
+        mkdirSync(backupDir, { recursive: true });
+        renameSync(legacyBackupPath, backupPath);
+      } else {
+        rmSync(legacyBackupPath, { force: true });
+      }
+      console.log('[mod:clementia] backup moved out of data/');
+    }
 
     const curBytes = readFileSync(originalPath);
     const curLen = curBytes.length;
@@ -104,6 +152,7 @@ function generateClientGarrisonData() {
       needBackup = true;
     }
     if (needBackup) {
+      mkdirSync(backupDir, { recursive: true });
       writeFileSync(backupPath, curBytes);
       console.log('[mod:clementia] garrisons.json backed up (%d bytes)', curLen);
     }
@@ -117,6 +166,12 @@ function generateClientGarrisonData() {
     base.garrison_clementia_kills_b = garrisonB;
 
     const out = JSON.stringify(base);
+    // Rewriting the file on every start is pointless when it already holds exactly these bytes — and a truncate-then-
+    // write races with another process reading data/ while it boots. Leave an up-to-date file untouched.
+    if (curBytes.toString('utf8') === out) {
+      console.log('[mod:clementia] client garrison data already up to date (%d entries)', Object.keys(base).length);
+      return;
+    }
     writeFileSync(originalPath, out);
     console.log('[mod:clementia] client garrison data written (%d bytes, %d entries)', out.length, Object.keys(base).length);
   } catch (e) {
@@ -126,6 +181,8 @@ function generateClientGarrisonData() {
 
 async function triggerDataReload() {
   try {
+    // Step 0: never replace a match host's version data set with the default one
+    if (!runsDefaultDataSet()) return;
     // Step 1: Reset the data.js singleton so next getData() calls loadData() with our hook
     const dataMod = await import('../../../Stronghold-Protocol/server/data.js');
     dataMod.resetData();

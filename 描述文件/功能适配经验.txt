@@ -1,6 +1,8 @@
 # 功能适配经验 — 问题排查与解决方案汇总
 # 组织：按功能模块归类，同模块不同问题归在一起
-# 最后更新：2026-10-29（20p 战斗倍速投票 1×/2× 双向切换；投票重复提交守卫；gameSpeed 复用链路）
+# 最后更新：2026-10-31（版本主机子进程继承 --import 钩子，详见【一】1.4 / 【七】第九轮）
+#                        此前：2026-10-30 plugin-skins 时装扩充（LZHAM 包解压、alpha 合并、
+#                        PNG 无损重压、200MB 上限）+ 版本干员池补全与测试闭环（【七】第八轮）
 
 
 ################################################################################
@@ -136,6 +138,29 @@
     修复：mod-framework/public/js/screens/game.js 导入+渲染，game.css 添加 .ca-pick 定位
     归属：此功能为 clone mod 所有，但渲染入口在 mod-framework 的 game.js
     经验：新增 UI 组件必须完成三步：定义 → 导入渲染 → CSS 定位
+
+  ── 1.4 版本主机子进程不继承 --import（mod 在非默认版本整条失效）──
+    现象：默认版本（第二期下半）20p / clementia / clone / dupBand 全部正常；
+          切到 act1autochess / act1autochess-v1_1 / act2autochess-v2_1 后
+          全部退回原版 4 人玩法，改版模式、倾向格、重复策略一并消失，且无任何报错
+    根因：非默认版本由 server/match/host/index.js 的 fork() 启动独立子进程，
+          该 fork 显式写死 execArgv: ['--max-old-space-size=xxx']，
+          父进程 scripts/launch.mjs 的 --import（scripts/20p-loader.mjs 模块解析钩子）
+          不在其中；钩子没注册 → 所有 mod overrides 不参与解析 → 子进程读到上游原版。
+          lobby 层也不会拦：room.modded 只对 content plugin 为 true，
+          两处 VERSION_UNSUPPORTED 判断都不命中，所以是"静默退化"而非报错
+    修复：host/index.js 新增 inheritedImportFlags(argv = process.execArgv) /
+          importFlagValue(v)，kind === 'version' 的 fork 在 execArgv 末尾追加父进程
+          的 --import；路径经 pathToFileURL(path.resolve(v)) 转绝对 file:// URL，
+          裸包名原样保留；forkSandbox 沙箱分支刻意不传（--permission 安全模型）
+    验证：test/match/version-host.test.js 全文件 8 项通过，其中第 8 项为
+          inheritedImportFlags 的 9 组边界断言（空 argv / 无关参数 / 分离式 /
+          --import= / 相对路径 / 绝对 URL / 裸包名 / 缺值 / 多钩子顺序）
+    经验：模块解析钩子（--import / loader）属于"进程级启动参数"，fork/worker 不会
+          自动继承。凡是"默认版本正常、切版本就回原版"的现象，先查子进程 execArgv，
+          再查 lobby 是否真的会拦（不拦 = 静默退化，最难排查）
+    归属：核心层改动（第一层），与 20p/clementia/clone/dupBand 四个 mod 共用；
+          不拆两套逻辑，所有版本走同一条钩子链
 
 
 ################################################################################
@@ -578,6 +603,49 @@
           主机 localhost 支持 brotli 而朋友 LAN IP 不支持，
           压缩方式差异可能是"只有主机出问题"的根因之一
 
+  ── 5.3 官方客户端资源包（.ab）读取：LZHAM 解压 ──
+    现象：UnityPy 加载官方 .ab 抛
+          NotImplementedError: Custom compression or unimplemented LZHAM
+    根因：官方 PC 端资源包（UnityFS v8 / Unity 2021.3.39f1）全部用 LZHAM 压缩，
+          Unity 后续版本已移除 LZHAM，UnityPy 默认不带解码器
+    修复：先 import tools/local-extract/aklz4.py（上游自带，导入即注册）
+          CompressionHelper.DECOMPRESSION_MAP[CompressionFlags.LZHAM]
+          之后 UnityPy 可直接读包，无需额外编译工具链
+    注意：资源包读取失败也可能是官方游戏正在运行占用文件句柄，
+          症状是随机几个 .ab 读失败，关掉游戏重跑即可（不是代码问题）
+
+  ── 5.4 时装素材提取的三条硬规则（plugin-skins）──
+    ① 页面配对不能按文件名猜
+       同一 skinpack/<charId>.ab 内有该干员全部时装的 TextAsset(.skel/.atlas)、
+       Texture2D、Sprite，命名是 <skinId> / <skinId>b（b = 背面）。
+       必须按 SkeletonDataAsset → AtlasAsset → Material._MainTex/_AlphaTex 取，
+       否则 front/back 会张冠李戴（图片对但模型错，视觉上是"串装"）
+
+    ② alpha 拆分页要合并，且要去掉 pma:
+       _UseAlphaTex=1 的页面 A 通道存在独立 [alpha] 纹理里，
+       要把该纹理 L 通道合进 A 通道输出直连 RGBA；
+       同时必须从 atlas 删掉 pma: 字段 —— 否则 pixi-spine 会二次预乘，
+       表现为整张图明显发暗
+
+    ③ 图片与插件现有素材存在固有像素差（均值 ≈3.5）
+       来自官方导出时的预乘取整，属正常范围，不要为此做额外色彩转换；
+       校验方法是逐像素比对已有套装（如 char_1020_reed2 三套），
+       skel/atlas 应当逐字节完全一致
+
+    补充：只有正面模型的时装（如 waaifu / heidi / wanqin）只写 spine.front，
+          游戏内 hasBackSpine 会回落到正面模型，不需要特殊处理
+
+  ── 5.5 插件 200 MB 上限 → PNG 无损重压 ──
+    现象：plugin-skins 加完 26 套后 204.6 MB，check 报超限
+    根因：上游导出的 PNG 压缩参数保守（zlib 默认级），图片占插件体积 90%+
+    修复：对插件内全部 PNG 用 PIL 重新编码
+          im.save(buf, 'PNG', optimize=True, compress_level=9)
+          落盘前必须重新解码 + 逐像素比对（ImageChops.difference().getbbox()），
+          确认 mode/size/像素完全一致才写回（无损，不改任何像素）
+    效果：79.4 MB → 67.6 MB（省 15%），插件总体积 192.8 MB
+    经验：这是纯无损操作，可反复执行；脚本幂等（重压后体积不再下降即跳过）。
+          再扩充时装前先看余量（当前仅剩 7.2 MB），素材增加会持续吃紧
+
 
 ################################################################################
 【六】通用经验速查
@@ -694,6 +762,12 @@
       再各自生成具体内容"是基本原则。每组独立调用包含随机决策的完整
       生成函数（如 generateDraft）会导致各组结果不一致（如 family 不同）。
       应将随机决策（weightedPick 等）提取到分组循环之外
+  45. 进程级启动参数不继承：--import / loader / execArgv 属于进程级参数，
+      fork / worker 都不会自动带上，必须显式追加。凡是"默认进程正常、
+      子进程退回原版"的现象，先查子进程的 execArgv，再查上层是否真的会拦
+      （不拦 = 静默退化，无任何报错，最难排查）
+  46. 功能范围类文档与实现同轮更新：文档里"只在哪生效"这类结论一旦过期，
+      下次排查会按旧文档误判，必须与代码同轮改并同步四文件流程
 
 
 ################################################################################
@@ -925,3 +999,174 @@
     □ 发起人 1 人房：票数直接达阈值，无需投票即生效（_openVote 短路）
     □ 观战者：看不到申请按钮、显示「观战中，无法投票」
     □ 1×→2×→1×→2× 反复切换，gameSpeed 始终为 基准 × 倍数，无漂移
+
+────────────────────────────────────────────────────────────────────────────────
+第八轮（2026-10-30）：版本干员池补全 + 测试闭环
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                         状态   归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  第一期自选报 no form for chess_char_6_diy1_a   ✅     8.1
+  2  自选池与 roster 重叠（token 双记录）           ✅     8.2
+  3  缺失盟约 / garrison 引用无法解析               ✅     8.3
+  4  召唤物变体缺失（变体表对不上槽位状态）         ✅     8.4
+  5  版本主机测试 stdout 被 mod 日志污染            ✅     8.5
+  6  tools/plugin.mjs check --json 解析失败        ✅     8.6
+  7  data.test.js effect key 断言 43 → 44          ✅     8.7
+  8  garrison 描述字段优先级写反（显示富文本标签）  ✅     8.8
+  9  versions-golden 场景数不匹配（diy 族）        ✅     8.9
+  10 versions-service EIO Access is denied         ⚠ 环境 8.10
+  11 版本主机并发启动超时（每次启动全量重载）       ✅     8.11
+  12 全量 node --test 并行超时                     ⚠ 环境 8.12
+
+  修复详情：
+
+  ── 8.1 自选校验失败：no form for chess_char_6_diy1_a ──
+    现象：第一期两个版本（act1autochess / act1autochess-v1_1）在 DIY 界面选新增干员，
+          进入对局时服务端报 char_xxx: no form for chess_char_6_diy1_a
+    根因：checkDiyPick() / unitForm() 按 chess.json 槽位的 status 键去查
+          backups.units[charId].forms；6★ 精英槽 equipLevel 为 2，
+          该 statusKey 对应的表单没被生成 → 查不到表单即报错
+    修复：新增 _patch_diy.mjs，严格按官方 tools/build-data.mjs 的表单归属规则重算：
+          · stand-in 补位干员 → 获得所有引用它的 chess 记录的状态
+          · DIY 原型干员     → 获得它服务的 tier 全部 slot 及 golden 记录的状态
+          · owned 自选池干员 → 获得全部 DIY 槽位状态
+    经验：表单不是"每个干员一张"，而是"每个 (干员, statusKey) 一张"；
+          补数据必须按构建器的归属规则算，不能按"缺什么补什么"猜
+
+  ── 8.2 自选池与 roster 重叠 → 同一 token 两条记录 ──
+    现象：validateReferences 报同一 token id 同时出现在 tokens.json 与 backups.tokens
+    根因：自选池里混进了本版本 chess.json 已作为固定 roster 使用的干员；
+          自选池干员的召唤物会进 backups.tokens，而 roster 干员的召唤物在 tokens.json，
+          一个 id 两条记录即冲突
+    修复：按官方 build-data legal6 的 `!roster.has(id)` 规则剔除重叠干员
+          （_patch_versions.mjs 追加名单 + _patch_diy.mjs 规范化自选池）
+    现状：三个版本 rosterOverlap = 0（自选池 84 / 84 / 76，默认版本 72）
+    经验：版本自选池不是"越多越好"，必须与固定 roster 互斥
+
+  ── 8.3 缺失盟约 / garrison 引用 ──
+    现象：补进来的干员引用了本版本 garrisons.json 里不存在的 garrison / 盟约 id
+    根因：名单从默认版本拷贝过来，但版本自己的 garrison / bands 表没有对应记录
+    修复：_patch_versions.mjs 从默认 garrisons.json 补记录；
+          garrison 同时写 desc（纯文本）与 descRaw（富文本）
+
+  ── 8.4 召唤物变体缺失 ──
+    现象：自选干员上场后召唤物按默认状态生成，与槽位状态不匹配
+    根因：backups.tokens 的 variants 键是 `<charId>@<statusKey>`，
+          只为部分状态生成过
+    修复：_patch_diy.mjs 的 buildDiyTokens 只为"自选干员的召唤物"生成全部槽位状态变体，
+          且只写 backups.tokens，绝不写入 tokens.json
+    经验：tokens.json 与 backups.tokens 必须严格分离，与官方构建逻辑一致
+
+  ── 8.5 版本主机测试 stdout 被日志污染 ──
+    现象：version-host.test.js / version-equipment.test.js 失败，父进程 JSON.parse 报错
+    根因：版本主机在独立子进程加载版本数据，子进程会加载 mod，
+          [mod:xxx] / [DIAG:xxx] 日志混进 stdout，父进程拿到的不是纯 JSON
+    修复：test/helpers/versionReplay.mjs 与 versionEquipment.mjs 在导入任何模块前
+          执行 for (const k of ['log','info','debug','warn']) console[k] = () => {};
+          versionEquipment 末行改为 process.stdout.write(JSON.stringify(results))
+    经验：凡是"子进程回传 JSON"的测试辅助，必须在 import 之前屏蔽 console，
+          并用 process.stdout.write 而不是 console.log（后者可能被包装/截断）
+
+  ── 8.6 tools/plugin.mjs check --json 解析失败 ──
+    现象：check-status.test.js 失败，插件检查的 JSON 输出无法解析
+    根因：modHook.js 自动加载 modManager.js，工具脚本 stdout 带上 mod 加载日志
+    修复：modManager.js 开头检测 process.argv[1] 是否为 tools/ 下的脚本，
+          是则过滤 [mod: / [modManager] 开头的 console.log
+    经验：根因修复优于在测试侧过滤——工具输出契约应由加载器自己保证
+
+  ── 8.7 effect key 总数 43 → 44 ──
+    现象：data.test.js 断言 keys.size === 43 失败
+    根因：clementia 注入两条 garrison（kills_a / kills_b）共用同一个
+          effect key clementia_global_kills，去重后总数 +1
+    修复：断言改为 44，测试描述同步
+
+  ── 8.8 garrison 描述字段优先级 ──
+    现象：playtest3.test.js 渲染断言失败，特质栏显示 <@ba.vup> 等富文本标签
+    根因：detailPanel.js 里写成 descRaw || desc，优先取了完整富文本，
+          该组件不解析标签 → 标签裸露
+    修复：改为 desc || descRaw（纯文本优先，RichText 场景才用 descRaw）
+
+  ── 8.9 golden 基线场景数不匹配 ──
+    现象：versions-golden.test.js 报 diy 族场景数与基线不符
+    根因：diyConfigs() 对缺表单的干员有 `if (!form) continue` 静默跳过；
+          补丁补齐表单后这些干员重新进入语料，场景数自然增长
+    处置：先逐族比对证明影响范围被限定（roster 41 / bonds 36 / fields 20 /
+          matches 16 / standins 12 全部一致，仅 diy 87 项变化），
+          再只重算 diy 族基线：
+          node tools/golden.mjs --family diy --update
+          结果：112 / 111 / 138 场景，0 引擎错误 / 0 abyss 违规
+    经验：基线不匹配先判断"是不是修复让原本被静默跳过的用例复活了"，
+          再决定是改代码还是改基线；务必先证明其余族零变化
+
+  ── 8.10 EIO Access is denied（环境问题，非代码）──
+    现象：versions-service.test.js 三个用例报 EIO, Access is denied
+    排查：单独复现发现任何目录 cpSync 到系统临时目录都失败
+          （test/fixtures、data/i18n、shared 全一样），mkdir 正常
+    结论：本机 Windows 对临时目录批量复制的限制（安全软件/受控文件夹访问类），
+          与版本数据内容无关；把 TEMP/TMP 指到本地磁盘后 8/8 全通过
+    经验：这类 EIO 先做"无关目录也失败"的对照实验，能立刻排除代码嫌疑
+
+  ── 8.11 版本主机并发启动超时 ──
+    现象：多个版本主机同时启动时，5s / 28s 超时踩线
+    根因：clementia mod 每次进程启动都重写 data/garrisons.json 并触发全量数据 reload
+    修复：mods/扩展角色/clementia/index.js
+          · garrisonsAlreadyLoaded() — 数据集里已是最新 garrison 则跳过 triggerDataReload
+          · generateClientGarrisonData() 内容相等即返回，不再每次重写文件
+          · 备份移到 .cache/clementia/（data/ 下的 JSON 会被当作数据文件对外提供）
+    效果：版本主机启动 6s → 1s 级，并发不再踩超时
+
+  ── 8.12 全量 node --test 并行超时（环境问题）──
+    现象：全量跑测试大量超时；单独跑对应文件全通过
+    根因：node --test 默认按 CPU 核数并行，每个测试文件都会加载 mod + 全量数据（约 6s/次），
+          机器被占满后 ws / 版本主机的 5s、28s 超时全部踩线
+    处置：按文件串行执行核心测试集
+          14 个版本/数据测试文件 → 212 tests / 203 pass / 0 fail / 9 skipped
+    经验：这个项目里测试文件自带"进程级数据单例"，并行会互相拖垮；
+          定位失败时先串行复现，避免把并行资源竞争误判成功能 bug
+
+  验证结果（2026-10-30）：
+    · node _patch_diy.mjs verify → 三个版本 0 problems
+      units 101 / 101 / 93，tokens 43 / 43 / 39
+    · 自选池：act1autochess 84、act1autochess-v1_1 84、act2autochess-v2_1 76、默认 72
+      与各自 roster 重叠 0
+    · 四个版本 6★ 槽位均可选克莱门莎（char_4231_clemnt）/ 珊比加（char_4235_thumpy），无报错
+    · 三个版本 diy 基线 112 / 111 / 138 场景，0 引擎错误 / 0 abyss 违规
+    · 14 个版本/数据测试文件串行：212 tests / 203 pass / 0 fail / 9 skipped
+
+────────────────────────────────────────────────────────────────────────────────
+第九轮（2026-10-31）：版本主机钩子继承（切版本后 mod 静默失效）
+────────────────────────────────────────────────────────────────────────────────
+
+  #  问题                                         状态   归类
+  ──────────────────────────────────────────────────────────────────────────────
+  1  切版本后 20p/clementia/clone/dupBand 全失效    ✅     1.4
+  2  版本子进程 execArgv 缺 --import（无任何报错）  ✅     1.4
+  3  相对路径 --import 在子进程里解析错位          ✅     本轮 9.3
+  4  功能描述口径与实现冲突（"仅默认版本生效"）    ✅     本轮 9.4
+
+  修复详情：根因与实现见【一】1.4。补充：
+
+  ── 9.3 子进程拿到的相对路径失效 ──
+    现象：直接透传父进程 --import 的相对路径，子进程 cwd 不同时找不到钩子文件
+    修复：统一 pathToFileURL(path.resolve(v)) 转绝对 file:// URL；
+          裸包名（如 tsx 之类）原样保留，缺值 / 后接其他 - 开头的参数跳过
+    经验：跨进程传路径一律转绝对 + file URL，不能指望子进程 cwd 与父进程一致
+
+  ── 9.4 文档口径必须跟着实现走 ──
+    现象：clementia 功能描述写"改版内容只在默认版本生效"，与修复后行为直接冲突
+    处置：四个 mod 的 功能描述.txt + README 统一加「适用范围」段，并按四文件流程同步：
+          核心层改动记录 → [25]/[26] + 第三层「版本主机钩子继承」检查清单
+          非上游文件功能记录 → 三/四/五/六节文件条目 + 七[25] + 九检查清单
+          功能适配经验 → 【一】1.4 + 通用经验 45/46 + 本第九轮
+          上游更新指南 → 第一层冲突清单 + 符号依赖表
+    经验：功能范围类结论（"只在哪生效"）是高价值文档，改实现必须同轮改文档
+
+  验证结果（2026-10-31）：
+    · node --test test/match/version-host.test.js → 8 tests / 8 pass / 0 fail
+      其中第 8 项为 inheritedImportFlags 的 9 组边界断言全通过
+      （空 argv / 无关参数 / 分离式 / --import= / 相对路径 / 绝对 URL /
+       裸包名 / 缺值 / 多钩子顺序）
+    · node tools/check-imports.mjs → 4 条既有违规，无新增
+    · forkSandbox 沙箱分支仍不传钩子（--permission 安全模型不变）
+    · 默认版本走本进程，行为零变化；三个非默认版本与默认版本共用同一条钩子链

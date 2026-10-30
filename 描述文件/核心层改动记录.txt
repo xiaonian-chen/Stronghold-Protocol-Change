@@ -2,7 +2,13 @@
 # 范围：Stronghold-Protocol/ 内相对上游 v0.3.3 的改动
 # 组织：按上游更新指南五层递进归类
 # 用途：上游更新时按层逐步检查，每层确认对应改动是否保留/需合并
-# 最后更新：2026-10-29（20p 战斗倍速投票 1×/2× 双向切换 — 纯 override，复用上游 gameSpeed，无核心层改动；投票重复提交守卫）
+# 最后更新：2026-10-31（版本主机 fork 继承父进程 --import 钩子：
+#                         server/match/host/index.js 新增 inheritedImportFlags，
+#                         三个非默认版本与默认版本共用同一条 mod 解析链）
+#                        此前：2026-10-30 plugin-skins 干员时装扩充（193 干员 / 299 时装 /
+#                         394 Spine，PNG 无损重压，删除死目录；上游再动 plugin-skins 必 CONFLICT）
+#                        + 版本数据集补全：3 个非默认版本的 backups/garrisons 对齐默认版本，
+#                          test/ 断言与 diy 基线同步；上游改 data/versions/ 或 test/ 会 CONFLICT
 
 
 ================================================================================
@@ -104,7 +110,97 @@
             不能每组独立调用 generateDraft()（会随机到不同 family）
       影响范围：仅影响导出可见性，不影响上游内部调用逻辑
 
-  合计：19 + 7(hook) = 26 个文件可能冲突
+  ── 版本数据集补全（6 个数据文件，2026-10-30 新增，⚠ 上游重发 data/versions/ 必 CONFLICT）──
+
+  [20] data/versions/act1autochess/backups.json
+       data/versions/act1autochess-v1_1/backups.json
+       data/versions/act2autochess-v2_1/backups.json
+       改：units / diy.operators / diy.ownedPool 补全到默认版本范围
+           补全每个 DIY 槽位状态对应的干员表单 forms、召唤物变体 variants
+           自选池规范化：剔除与本版本 chess.json 里 roster 重叠的干员
+       依据：严格对齐 tools/build-data.mjs 的两条规则
+             legal6  !roster.has(id)   —— 自选池不得含固定 roster 干员
+             buildDiyTokens          —— 只给自选干员的召唤物建 backups.tokens 记录
+       现状：units 101 / 101 / 93，tokens 43 / 43 / 39，自选池 84 / 84 / 76
+             （默认版本 units 89 / tokens 38 / 自选池 72；版本池为本版本自有 + 默认范围的并集）
+       验证：node _patch_diy.mjs verify → 三个版本均 0 problems
+
+  [21] data/versions/act1autochess/garrisons.json
+       data/versions/act1autochess-v1_1/garrisons.json
+       data/versions/act2autochess-v2_1/garrisons.json
+       改：补齐自选干员引用的 garrison 记录与缺失盟约引用（desc 纯文本 + descRaw 富文本双字段）
+       原因：自选干员在 DIY 槽位里可被选中后，其 garrison 引用必须能在本版本数据集内解析
+       冲突策略：上游若重发版本数据，以新版上游为基准重跑 _patch_versions.mjs + _patch_diy.mjs
+
+  ── 测试基线同步（8 个测试文件，2026-10-30 新增，⚠ 上游改 test/ 必 CONFLICT）──
+
+  [22] test/golden/act1autochess/diy.json
+       test/golden/act1autochess-v1_1/diy.json
+       test/golden/act2autochess-v2_1/diy.json
+       改：按补全后的自选池重生成 diy 族基线（112 / 111 / 138 场景，0 引擎错误 / 0 abyss 违规）
+       原因：补丁让原本因缺表单被 diyConfigs() 里 `if (!form) continue` 静默跳过的干员
+             重新进入语料，场景数增长；其余五族（roster/bonds/fields/matches/standins）不受影响
+       冲突策略：取上游基线后重跑 node tools/golden.mjs --family diy --update
+
+  [23] test/data.test.js / test/data-versions.test.js / test/versions-keying.test.js
+       改：期望值适配 —— garrison effect key 总数 43 → 44，版本数据规模与键名规则同步
+       原因：clementia 注入 2 条 garrison 记录共用同一个 effect key clementia_global_kills
+
+  [24] test/helpers/versionReplay.mjs / test/helpers/versionEquipment.mjs
+       改：模块导入前屏蔽 console.log/info/debug/warn；
+           versionEquipment 末行由 console.log 改为 process.stdout.write
+       原因：版本主机子进程的 stdout 被 [mod:] / [DIAG:] 日志行污染，父进程 JSON.parse 失败
+
+  ── 版本主机钩子传递（1 个核心文件 + 1 个测试，2026-10-31 新增）──
+
+  [25] server/match/host/index.js — 版本主机 fork 继承父进程 --import 钩子【20p/clementia/clone/dupBand】
+      原：fork(ENTRY, [], { execArgv: [`--max-old-space-size=${mb}`], ... })
+          子进程只拿到内存上限，父进程 scripts/launch.mjs 的 --import（20p-loader.mjs 的
+          模块解析钩子）不在其中 → 版本房间加载上游原版，mod overrides 全部失效
+      改：新增导出 inheritedImportFlags(argv = process.execArgv) / importFlagValue(v)
+          · 识别 --import x 与 --import=x 两种写法，缺值/后续是 - 开头的跳过
+          · 路径经 pathToFileURL(path.resolve(v)) 转绝对 file:// URL；裸包名原样保留
+          · kind === 'version' 的 fork 在 execArgv 末尾追加 ...inheritedImportFlags()
+      原因：20p / clementia / clone / dupBand 全是模块解析钩子方案（不是 content plugin），
+            钩子没进子进程 = 该版本房间里整个 mod 不存在；lobby 层也不会拦
+            （room.modded 只对 content plugin 为 true，两处 VERSION_UNSUPPORTED 不命中）
+      影响范围：仅版本主机 fork 分支；默认版本走本进程，不受影响；
+                forkSandbox 沙箱分支刻意不传（--permission 安全模型）
+      合并策略：保留 inheritedImportFlags + fork 追加逻辑；上游若重写 host 的 fork 参数
+                或改用 worker 启动，必须把同样的钩子传递接回去（否则 mod 在版本房间静默失效）
+      验证：test/match/version-host.test.js 全文件 8 项测试通过，
+            其中第 8 项为 inheritedImportFlags 的 9 组边界断言
+
+  [26] test/match/version-host.test.js — inheritedImportFlags 边界用例（第 8 项）
+      覆盖：空 argv / 无关参数 / --import 分离式 / --import= / 相对路径 /
+            绝对 file URL / 裸包名 / 缺值（含后接其他 - 开头参数）/ 多钩子顺序
+      合并策略：上游若改版本主机启动方式，用例需同步
+
+  ── 仅注释/文档同步（无逻辑改动，不产生冲突）──
+    scripts/20p-loader.mjs   注释补充：钩子对所有官方版本生效、版本主机子进程会继承
+    docs/design/match.md     §35.23 版本主机段补充 --import 传递机制
+
+  合计：20 + 7(hook) + 6(版本数据) + 9(测试) = 42 个文件可能冲突
+
+
+  ── 插件素材（plugin-skins，2026-10-30 新增，⚠ 上游只要动这个插件就必冲突）──
+
+  文件                                          改动量
+  ──────────────────────────────────────────────────────────────────────────────
+  plugins/plugin-skins/plugin.json               ~4751 行改动（193 干员 / 299 时装）
+  plugins/plugin-skins/plugin.lock.json          ~28083 行改动（394 Spine models）
+  plugins/plugin-skins/README.md                 重写（原为上游模板原文）
+  plugins/plugin-skins/<charId>/<skinId>/        453 张 PNG 无损重压 + 26 套新增素材
+  plugins/plugin-skins/char_102_texas/epoque_7/  删除（零引用死目录，7 个文件）
+  docs/SKINS.md                                  实测数字 273/273 → 299/299
+
+  冲突策略：
+    · plugin.json — 以"干员+时装"为最小单元按 charId/skinId 取并集
+    · plugin.lock.json — 不要手工合并，取并集后重跑 pack 重建
+      node tools/plugin.mjs pack plugin-skins
+    · 素材目录 — 上游新增的时装目录直接保留，我们不删上游素材
+    · README.md — 以本文件版本为准（记录了提取/重压/缺口规则）
+  验证：node tools/plugin.mjs check plugin-skins --strict → 0 problem / 0 warning
 
 
 ================================================================================
@@ -175,6 +271,36 @@
   □ 房间版本标签（VersionTag）正常显示
   □ 协议启动动画时序正常（DRAFT_HOLD_MS / BOOT_MIN_MS）
 
+  ── 插件素材（plugin-skins，2026-10-30 起必查）──
+
+  □ node tools/plugin.mjs check plugin-skins --strict → 0 problem / 0 warning
+  □ plugin.json 仍为 193 干员 / 299 时装（上游若扩充则按 charId/skinId 取并集）
+  □ plugin.lock.json 为 pack 生成的 394 Spine models（取并集后重跑 pack）
+  □ 插件体积 ≤ 200 MB（当前 192.8 MB，超限按 功能适配经验 5.5 重压 PNG）
+  □ 游戏内外观插件可切换时装，抽查新干员正反面正常
+
+  ── 版本数据集（data/versions/，2026-10-30 起必查）──
+
+  □ node _patch_diy.mjs verify → act1autochess / act1autochess-v1_1 / act2autochess-v2_1 均 0 problems
+  □ 三个版本自选池与本版本 roster 无重叠（重叠会让同一 token 同时进 tokens.json 与 backups.tokens）
+  □ 每个 DIY 槽位状态都能在 backups.units[charId].forms 找到对应表单（否则报 no form for chess_xxx）
+  □ 自选干员的召唤物变体（<charId>@<statusKey>）齐备
+  □ 房间切到各非默认版本，自选编队选克莱门莎 / 珊比加等新增干员不报错
+  □ node --test test/data.test.js test/data-versions.test.js test/versions-keying.test.js 全通过
+  □ node --test test/versions-golden.test.js 全通过（diy 基线场景数与补丁后自选池匹配）
+
+  ── 版本主机钩子继承（2026-10-31 起必查）──
+
+  □ 四个版本（默认 + 三个非默认）都能创建房间并正常开局
+  □ 切版本后 20p 人数上限 / 分组 / 各类投票仍生效（不是退回 4 人原版）
+  □ 切版本后 clementia 改版模式可选、特质与额外盟约生效
+  □ 切版本后 clone 倾向格 / dupBand 重复策略仍生效
+  □ m.public 的 sp.groups 字段在版本房间里存在（钩子生效的端到端标记）
+  □ 版本子进程的 execArgv 含父进程的 --import（已转绝对 file:// URL）
+  □ node --test test/match/version-host.test.js 全文件 8 项通过
+    （第 8 项为 inheritedImportFlags 的 9 组边界断言）
+  □ forkSandbox 沙箱模式仍不传钩子（--permission 安全模型不变）
+
 
 ================================================================================
 第四层：mod-framework 框架兼容性检查 — 组件清单
@@ -203,6 +329,7 @@
   核心层修改：2 个文件（Git 追踪，第一层处理）
     scripts/launch.mjs — 20p-loader 入口
     server/lobby.js    — businessHook + dupBand
+  版本生效前提：server/match/host/index.js（[25] 版本主机 fork 继承 --import，四个 mod 共用）
 
   Override 文件（mods/玩法/20p/overrides/，24 个）：
     server/lobby.js                          server/data.js
@@ -257,6 +384,8 @@
     □ 3D地图加载偶发失败后自动重试恢复（SW 3次 + 页面 3×2 次）✅ 2026-10-26
     □ 分组机变各组卡牌类型一致（同回合 A/B/C 组全是同一种 family）✅ 2026-10-27
     □ 歌蕾蒂娅/焰尾/潘格尼尼特质/策略正常触发（rollPool 三种模式完整）✅ 2026-10-27
+    □ 切到三个非默认版本，分组/扩池/投票照常生效（版本房间继承 --import 钩子）✅ 2026-10-31
+    □ 5 人以下房间退化为上游行为（不分组、干员池不放大）✅ 2026-10-31
 
   L1 链路追踪状态：✅ 全部通过（2026-10-26）
     disableFlying/bossHitLimit/capacity 三条核心链路完整
@@ -278,6 +407,7 @@
     public/js/ui/detailPanel.js   — desc||descRaw
     public/js/render/app.js       — ++layerPopSeq + _flags 透传
     data/garrisons.json           — clementia 特质数据
+  版本生效前提：server/match/host/index.js（[25] 版本主机 fork 继承 --import，四个 mod 共用）
 
   Override 文件（mods/扩展角色/clementia/overrides/，5 个）：
     shared/diy.js                  — augmentDiyRecord + garrisonIds（精锐/非精锐区分）
@@ -297,11 +427,14 @@
     □ 击杀计数 + 盟约叠加正常（garrison 叠层安装器）
     □ 非精锐每 3 击杀 +1 层，精锐每 3 击杀 +2 层
     □ freezeDiy 保留 _flags（改版选择在重进房间后不丢失）
+    □ 切到三个非默认版本，改版模式可选、额外盟约与叠层特质生效（版本房间继承钩子）✅ 2026-10-31
+    □ 各版本 data/versions/<版本>/garrisons.json 自带 kills_a/b，子进程不再注入/重写 ✅ 2026-10-31
 
   ═══ Mod C：dupBand ═══
 
   核心层修改：1 个文件（Git 追踪，第一层处理）
     server/lobby.js — setGameMode('dupBand') + startMatch rules
+  版本生效前提：server/match/host/index.js（[25] 版本主机 fork 继承 --import，四个 mod 共用）
 
   复用 20p 的 override 文件：
     mods/玩法/20p/overrides/server/lobby.js    — 3 处 dupBand 代码
@@ -310,10 +443,12 @@
   验证清单：
     □ 创建 dupBand 房间不报 invalid game mode
     □ 乐队选择时队友可重复选相同策略
+    □ 切到三个非默认版本，队友仍可选重复策略（版本房间继承钩子）✅ 2026-10-31
 
   ═══ Mod D：clone ═══
 
   核心层修改：无
+  版本生效前提：server/match/host/index.js（[25] 版本主机 fork 继承 --import，四个 mod 共用）
   Override 文件：无
   纯钩子实现，modHook 正常则 clone 正常。
 
@@ -321,6 +456,7 @@
     □ clone 房间可创建
     □ 倾向盟约可选择（C2S g.setAffinityBond 已注册）
     □ 进游戏 4 人共享相同阵容
+    □ 切到三个非默认版本，倾向格与共享阵容照常生效（版本房间继承钩子）✅ 2026-10-31
 
 
 ================================================================================
@@ -364,3 +500,49 @@
                                                     + VotePanel 移除倍速按钮
                                                     + 已答复者不再显示投票按钮
     public/css/screens/game.css               修改：新增 .team__speed 系列样式
+
+  ── 未提交的工作树改动（2026-10-30 干员时装扩充）──
+
+  核心层（Stronghold-Protocol/ 内）：
+    plugins/plugin-skins/plugin.json          修改：1.0.0 → 1.1.0；新增 19 个干员 / 26 套时装
+                                                     （193 干员 / 299 时装）
+    plugins/plugin-skins/plugin.lock.json     重建：394 Spine models（pack 自动生成）
+    plugins/plugin-skins/README.md            重写：原为上游模板原文（"No game art is included"），
+                                                     改为真实内容说明 + 提取规则 + 更新流程 + 已知缺口
+    plugins/plugin-skins/<charId>/<skinId>/   新增 26 套素材（skel/atlas/页面 PNG/avatar）
+                                              + 453 张 PNG 无损重压（79.4 MB → 67.6 MB）
+    plugins/plugin-skins/char_102_texas/epoque_7/
+                                             删除：零引用死目录（7 个文件）
+    docs/SKINS.md                             修改：实测数字 273/273 → 299/299
+
+  工作树统计（2026-10-31）：git status = 488 modified + 8 deleted + 3 untracked
+    （untracked 为 start-windows-quiet.bat / fetch-assets-quiet.bat / quiet-log.mjs）
+    插件总体积 192.8 MB / 1481 files（上限 200 MB，余量 7.2 MB）
+
+  未完成：nlc#1 三套（char_1033_swire2 / char_1040_blaze2 / char_2025_shu）
+    官方 skin_table.json 上线时间 2026-10-16（1792137600）
+    本机客户端 skinpack 包最新 2026-10-10，包内无 nlc#1 的 stem
+    → 客户端更新后重跑：python d:\yjw\_apply_skins.py --apply
+                       → node tools/plugin.mjs pack plugin-skins
+
+  ── 未提交的工作树改动（2026-10-31 版本主机钩子传递）──
+
+  核心层（Stronghold-Protocol/ 内）：
+    server/match/host/index.js      修改：新增导出 inheritedImportFlags(argv = process.execArgv) /
+                                          importFlagValue(v)；kind === 'version' 的 fork
+                                          在 execArgv 末尾追加 --import（路径转绝对 file:// URL）
+    test/match/version-host.test.js 修改：新增 inheritedImportFlags 边界用例（9 组）
+    scripts/20p-loader.mjs          修改：仅注释（钩子对所有官方版本生效 + 版本子进程继承）
+    docs/design/match.md            修改：§35.23 版本主机段补充钩子传递机制
+
+  非上游（mods/ + 根 README）：
+    mods/玩法/20p/功能描述.txt                  新增「适用范围」段（四个官方版本均生效）
+    mods/扩展角色/clementia/功能描述.txt        「4. 版本兼容性」整节重写（旧结论"仅默认版本生效"作废）
+    mods/模式/clone/功能描述.txt                新增「适用范围」段
+    mods/模式/dupBand/功能描述.txt              新增「适用范围」段
+    README.md                                   四个 mod 章节同步适用范围 / 版本兼容性
+
+  验证：
+    node tools/check-imports.mjs → 4 条既有违规，无新增
+    inheritedImportFlags 边界用例 9/9 通过（动态导入脚本直跑，临时文件已清理）
+    未改动：data/ 与 MANIFEST.json（mod 覆盖由钩子透明加载，上游文件字节不变）
