@@ -1,8 +1,10 @@
 # 非上游文件功能记录 — 记录所有非上游文件基于上游添加的内容和实现的功能
 # 用途：记录所有非上游文件基于上游添加的内容和实现的功能
 #       以防更新上游时遗漏这部分功能
-# 最后更新：2026-10-31（新增第十节：单仓库双分支发布结构（main/text/core），
-#                          .gitmodules 指向本仓库 core 分支，子模块快照首次推送完成）
+# 最后更新：2026-11-01（第十节补充：删除 v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta
+#                          五个旧 tag（本地+远端），只保留 v1.3.3-beta；旧 tag 的核心目录已不存在）
+#                        此前：2026-10-31 新增第十节：单仓库双分支发布结构（main/text/core），
+#                          .gitmodules 指向本仓库 core 分支，子模块快照首次推送完成
 #                        此前：核心层 [25] 版本主机继承父进程 --import 钩子；
 #                          四个 功能描述.txt 统一「适用范围」段，四个官方版本均生效
 #                        此前：2026-10-30 plugin-skins 干员时装扩充（193 干员 / 299 时装 / 394 Spine；
@@ -884,7 +886,15 @@
       → 源码获取靠 clone --recurse-submodules，双击即玩靠 Releases 的完整 zip
     · node/ 运行时被 .gitignore 排除，只存在于本机与 Releases 包
 
-  ── 历史遗留（不可修复，仅记录）──
-    v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta / v1.3.3-beta（旧 tag）的 gitlink
-    均指向本机私有 commit，从未推送 → 这些旧 tag 下载后子模块为空
-    → 修复方式只有重打 tag 并指向 core 分支上的 commit（v1.3.3-beta 已重打）
+  ── 历史遗留（已于 2026-11-01 清理，仅记录）──
+    v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta 的 gitlink 均指向本机私有 commit
+    （ea7dbbe / 169e7ee / 74520e1），从未推送 → 这些旧 tag 下载后子模块为空，
+    且 .gitmodules 为相对路径 url = ./Stronghold-Protocol，远端解析失败（404）
+
+    2026-11-01 处理：本地与远端一次性删除上述 5 个 tag，只保留 v1.3.3-beta。
+    理由：核心层已改动，旧 tag 对应的核心目录已不存在，无法也不需要还原。
+    待 v1.3.3-beta 测试通过后再从当前状态重新发布稳定版。
+
+    ⚠ 后续每个新 tag 都必须确认：gitlink 指向 core 分支上的 commit，
+      且该 commit 已在远端可查（git ls-remote origin core 能看到）
+    ⚠ GitHub 网页上的 Releases（若已建过旧版本）需手工删除，git 无法操作

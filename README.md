@@ -1,4 +1,4 @@
-# Stronghold Protocol Change v1.3.2（测试版）
+# Stronghold Protocol Change v1.3.3（测试版）
 
 基于上游 [Stronghold Protocol v0.3.3](https://github.com/sganggs/Stronghold-Protocol/releases) 的集成改版，在保留上游核心玩法完整的前提下，新增多人扩展玩法、角色增强、游戏模式等功能。
 
