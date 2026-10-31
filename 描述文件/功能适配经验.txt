@@ -1,7 +1,9 @@
 # 功能适配经验 — 问题排查与解决方案汇总
 # 组织：按功能模块归类，同模块不同问题归在一起
-# 最后更新：2026-11-01（删除 5 个旧 tag（v1.0/v1.1/v1.2/v1.3.1-beta/v1.3.2-beta），
-#                        只保留 v1.3.3-beta，详见【七】10.3）
+# 最后更新：2026-11-01（游戏本体分支 core 重命名为 core-text，确立 core-X 分支配对规则，
+#                        详见【七】10.4）
+#                        此前：删除 5 个旧 tag（v1.0/v1.1/v1.2/v1.3.1-beta/v1.3.2-beta），
+#                        只保留 v1.3.3-beta，详见【七】10.3
 #                        此前：2026-10-31 单仓库双分支发布结构（方案 A）：子模块快照推送到 core 分支，
 #                        详见【六】47/48 与【七】第十轮
 #                        此前：版本主机子进程继承 --import 钩子（【一】1.4 / 【七】第九轮）
@@ -1237,4 +1239,25 @@
     经验：发布过但下载不可用的版本，比"没有这个版本"更有害 —— 一律删除
           GitHub 网页 Releases 若已建过旧版本，git 删不到，必须手工清理
     后续：v1.3.3-beta 测试通过后再从当前状态重新发布稳定版，
-          发布前逐项确认 gitlink 指向 core 且远端可查
+          发布前逐项确认 gitlink 指向 core-* 且远端可查
+
+  ── 10.4 游戏本体分支按根目录分支配对命名（2026-11-01）──
+    决策：core 分支重命名为 core-text，确立「根目录分支 X ↔ 游戏本体分支 core-X」
+          发稳定版时新建 core-main
+    理由：原来的 core 名字看不出归属，实际只服务 text 测试版；
+          加了后缀后每个根目录分支都有明确对应的游戏本体分支，
+          避免发稳定版时误把 main 的 gitlink 指到测试快照上
+    操作（顺序不能颠倒，必须先建后删）：
+      1) git push origin core:core-text        先在远端复制一份
+      2) git branch -m core core-text          本地重命名
+      3) git branch -u origin/core-text        改跟踪目标
+      4) git push origin --delete core         最后才删旧的
+      5) 主仓库 .gitmodules 的 branch 改为 core-text
+    根因：bf97326d6 当时只被 core 一个分支引用。若先删 core，
+          该 commit 立即变为不可达 → 远端 gc 后克隆时找不到 → 子模块目录为空
+    经验：删分支前先确认「这个 commit 还有别的引用吗」——
+          用 git branch -r --contains <commit> 或 git tag --contains <commit> 检查
+    附带发现：主仓库 .git/config 里的 submodule url 仍指向旧目录
+              D:/yjw/Stronghold-Protocol-v0.3.1/...（该目录已不存在）
+              本地 git submodule update 会因此失败；已改为远端 URL
+              提醒：.git/config 不随仓库分发，但本机操作会踩坑

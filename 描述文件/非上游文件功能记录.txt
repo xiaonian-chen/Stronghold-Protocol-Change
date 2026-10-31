@@ -1,8 +1,11 @@
 # 非上游文件功能记录 — 记录所有非上游文件基于上游添加的内容和实现的功能
 # 用途：记录所有非上游文件基于上游添加的内容和实现的功能
 #       以防更新上游时遗漏这部分功能
-# 最后更新：2026-11-01（第十节补充：删除 v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta
-#                          五个旧 tag（本地+远端），只保留 v1.3.3-beta；旧 tag 的核心目录已不存在）
+# 最后更新：2026-11-01（第十节重写：游戏本体分支 core 重命名为 core-text，
+#                          确立「根目录分支 X ↔ 游戏本体分支 core-X」配对规则，
+#                          发稳定版时新建 core-main；同步必查清单）
+#                        此前：2026-11-01 删除 v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta
+#                          五个旧 tag（本地+远端），只保留 v1.3.3-beta；旧 tag 的核心目录已不存在
 #                        此前：2026-10-31 新增第十节：单仓库双分支发布结构（main/text/core），
 #                          .gitmodules 指向本仓库 core 分支，子模块快照首次推送完成
 #                        此前：核心层 [25] 版本主机继承父进程 --import 钩子；
@@ -833,25 +836,33 @@
   □ 运行 gen-patches.js 重新生成所有指纹
 
   ── 仓库结构 / 发布（2026-10-31 起必查）──
-  □ .gitmodules 的 url 指向本仓库、branch = core（不是相对路径 ./Stronghold-Protocol）
-  □ 主仓库 git submodule status 显示的 commit == 远端 core 分支 HEAD
-  □ git ls-remote origin core 有返回（快照已推送，不是只存在于本机）
-  □ 主仓库 main/text 的 gitlink 指向 core 分支上真实存在的 commit
+  □ .gitmodules 的 url 指向本仓库、branch = core-<根目录分支名>（不是相对路径 ./Stronghold-Protocol）
+  □ branch 与根目录分支配对：text → core-text，main → core-main
+  □ 主仓库 git submodule status 显示的 commit == 远端对应 core-* 分支 HEAD
+  □ git ls-remote origin core-text 有返回（快照已推送，不是只存在于本机）
+  □ 主仓库 main/text 的 gitlink 指向对应 core-* 分支上真实存在的 commit
+  □ 删除任何 core-* 分支前，其 commit 已被别的分支/标签引用（否则变不可达）
   □ 全新目录 git clone --recurse-submodules 后 Stronghold-Protocol/ 非空
   □ 子模块 upstream remote 仍指向原作者仓库（更新路径未被切断）
   □ Releases 挂的是本机打包的完整 zip（含 node/ 运行时），不是 GitHub 自动生成的源码包
 
 
 ================================================================================
-十、仓库结构与发布（单仓库双分支，2026-10-31）
+十、仓库结构与发布（单仓库多分支，2026-10-31，2026-11-01 调整）
 ================================================================================
 
   仓库：https://github.com/xiaonian-chen/Stronghold-Protocol-Change.git
 
-  ── 三分支结构 ──
-    main  稳定版：项目根目录（mods/、mod-framework/、描述文件/、node/、启动脚本）
-    text  测试版：同结构，功能领先 main（v1.3.1 / v1.3.2 / v1.3.3-beta 都在这里）
-    core  游戏本体快照：Stronghold-Protocol/ 的全部文件（34751 文件 / 199.6 MB）
+  ── 分支结构（按「根目录分支 + 对应游戏本体分支」配对）──
+    main       稳定版根目录：mods/、mod-framework/、描述文件/、node/、启动脚本
+    text       测试版根目录：同结构，功能领先 main（v1.3.3-beta 在这里）
+    core-text  text 对应的游戏本体快照：Stronghold-Protocol/ 的全部文件
+               （34751 文件 / 199.6 MB / 快照 commit bf97326d6）
+    core-main  预留：main 对应的游戏本体快照，发稳定版时才创建
+
+    命名规则：根目录分支 X ↔ 游戏本体分支 core-X
+    ⚠ 历史命名：core-text 原名为 core（2026-11-01 重命名），加 -text 后缀是为了
+      明确它只服务测试版；发稳定版时新建 core-main，不要把稳定版 gitlink 指到 core-text
 
   功能：一个仓库 URL 就能克隆出完整可运行项目，不再依赖第二个仓库或本机私有提交
 
@@ -859,29 +870,43 @@
     [submodule "Stronghold-Protocol"]
         path = Stronghold-Protocol
         url = https://github.com/xiaonian-chen/Stronghold-Protocol-Change.git
-        branch = core
+        branch = core-text
 
     ⚠ 旧值是相对路径 url = ./Stronghold-Protocol，远端解析失败，
       从 GitHub 克隆时子模块目录为空
+    ⚠ branch 字段只影响 git submodule update --remote；
+      clone --recurse-submodules 直接按 gitlink 的 commit 检出，
+      只要该 commit 在远端任意分支/标签可达即可
 
   ── 子模块 remotes（并存，互不干扰）──
     upstream  https://github.com/sganggs/Stronghold-Protocol.git   原作者，更新用
-    origin    本仓库 core 分支                                     发布用
+    origin    本仓库 core-text 分支                                发布用
 
-  ── core 快照制作流程（每次上游更新后执行一次）──
+  ── core-text 快照制作流程（每次上游更新后执行一次）──
     1) 子模块内 git fetch upstream --tags
     2) 在已合并完成的分支上走完五层流程（核心合并 → 版本漂移 → 插件 → 框架 → mod 适配）
-    3) git checkout core
-    4) git read-tree -u --reset <已合并完成的分支>   用合并后的树替换 core 工作树
+    3) git checkout core-text
+    4) git read-tree -u --reset <已合并完成的分支>   用合并后的树替换 core-text 工作树
     5) git add -A && git commit -m "core: vX.Y.Z 游戏本体快照（上游 <tag> + 核心层改动）"
-       父提交 = core 上一次快照（必须是链，不能每次新建孤立根提交）
-    6) git push origin core
-    7) 主仓库 git add Stronghold-Protocol 更新 gitlink → 提交 main/text
+       父提交 = core-text 上一次快照（必须是链，不能每次新建孤立根提交）
+    6) git push origin core-text
+    7) 主仓库 git add Stronghold-Protocol 更新 gitlink → 提交 text
+
+  ── 发稳定版时（新增 core-main）──
+    1) text 测试通过 → 主仓库合并 text → main
+    2) 子模块 git checkout -b core-main core-text   从当前测试快照起点创建
+    3) 若稳定版核心与测试版一致：直接 git push origin core-main（同一 commit，零传输）
+    4) 若不一致：在 core-main 上重新做快照并提交
+    5) 主仓库 .gitmodules 的 branch 改为 core-main，gitlink 指向 core-main 的 commit
+    6) 打稳定版 tag 并推送
+
+    ⚠ 关键：删除某个 core-* 分支前，必须确认该分支的 commit 已被另一个分支/标签引用，
+      否则 commit 变为不可达 → 克隆时找不到 → 子模块目录为空
 
   ── 已知代价与限制 ──
-    · 首次推送 core（远端为空、无上游基准对象）：约 790 MB
+    · 首次推送快照（远端为空、无上游基准对象）：约 790 MB
       原因：本地 blob 是按上游历史做的增量压缩，远端没有基准，git 必须还原完整对象
-    · 后续快照以 core 上一提交为父 → 远端已有基准 → 推送量回到 MB 级
+    · 后续快照以 core-* 上一提交为父 → 远端已有基准 → 推送量回到 MB 级
     · GitHub 仓库 ZIP 下载永远不含子模块内容，无论指向哪个远端/分支
       → 源码获取靠 clone --recurse-submodules，双击即玩靠 Releases 的完整 zip
     · node/ 运行时被 .gitignore 排除，只存在于本机与 Releases 包
@@ -895,6 +920,6 @@
     理由：核心层已改动，旧 tag 对应的核心目录已不存在，无法也不需要还原。
     待 v1.3.3-beta 测试通过后再从当前状态重新发布稳定版。
 
-    ⚠ 后续每个新 tag 都必须确认：gitlink 指向 core 分支上的 commit，
-      且该 commit 已在远端可查（git ls-remote origin core 能看到）
+    ⚠ 后续每个新 tag 都必须确认：gitlink 指向对应 core-* 分支上的 commit，
+      且该 commit 已在远端可查（git ls-remote origin core-text 能看到）
     ⚠ GitHub 网页上的 Releases（若已建过旧版本）需手工删除，git 无法操作
