@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "plugin-roomlist",
+  "version": "1.0.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/index.js": {
+      "sha256": "eaa893aeb335afb1455c87a038ee5cf4846a316b1c51338b723d2c17b1b4bb60",
+      "bytes": 13536
+    },
+    "plugin.json": {
+      "sha256": "4de59377007324ba0c40b4e6379a55edee0e1d5f30d3673d8180a7a082267aa0",
+      "bytes": 350
+    },
+    "server/index.js": {
+      "sha256": "e21dac512e2dcae7a320f0298aa30aa70e11e326aceca372da4973f9a20dfa60",
+      "bytes": 2556
+    }
+  },
+  "spine": {}
+}

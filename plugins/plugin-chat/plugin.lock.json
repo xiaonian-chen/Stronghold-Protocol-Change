@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "plugin-chat",
+  "version": "1.0.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "plugin.json": {
+      "sha256": "a2711dd814b19502b8fe56615effe54982e1b41f54e7cba78180282a8ef97feb",
+      "bytes": 340
+    },
+    "server/index.js": {
+      "sha256": "01948d4a4e701bd4ce24421df1ab7de9da8f2afd3ea0b16b8f923aba5b273ac3",
+      "bytes": 4925
+    },
+    "client/index.js": {
+      "sha256": "9e2ab3698f749c87367358ed9b7def142a53d60626641350d6833fe6cf1656a8",
+      "bytes": 14877
+    }
+  },
+  "spine": {}
+}

@@ -1,0 +1,17 @@
+{
+  "id": "plugin-chat",
+  "manifest": 2,
+  "name": {
+    "zh": "局内聊天"
+  },
+  "version": "1.0.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": ["room"],
+  "permissions": ["trusted.server", "trusted.page"],
+  "entry": {
+    "server": "server/index.js",
+    "client": "client/index.js"
+  }
+}

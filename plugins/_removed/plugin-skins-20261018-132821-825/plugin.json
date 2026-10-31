@@ -1,0 +1,31 @@
+{
+  "$schema": "../../schemas/plugin.schema.json",
+  "manifest": 2,
+  "name": {
+    "zh": "干员时装"
+  },
+  "version": "1.0.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "cosmetic",
+  "scope": [
+    "room",
+    "personal"
+  ],
+  "permissions": [
+    "assets.add",
+    "assets.override"
+  ],
+  "assets": {
+    "chars": {
+      "char_102_texas": {
+        "skins": {
+          "outfit-1": {
+            "name": "Outfit 1",
+            "group": ""
+          }
+        }
+      }
+    }
+  }
+}

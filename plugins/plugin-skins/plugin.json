@@ -1,0 +1,4177 @@
+{
+  "$schema": "../../schemas/plugin.schema.json",
+  "manifest": 2,
+  "name": {
+    "zh": "干员时装"
+  },
+  "version": "1.1.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "cosmetic",
+  "scope": [
+    "room",
+    "personal"
+  ],
+  "permissions": [
+    "assets.add",
+    "assets.override"
+  ],
+  "assets": {
+    "chars": {
+      "char_003_kalts": {
+        "skins": {
+          "sale#14": {
+            "name": "时遗",
+            "group": "忒斯特收藏/XVI",
+            "avatar": "char_003_kalts/sale_14/avatar.png",
+            "portrait": "char_003_kalts/sale_14/avatar.png"
+          },
+          "boc#6": {
+            "name": "残余",
+            "group": "斗争血脉/VI",
+            "avatar": "char_003_kalts/boc_6/avatar.png",
+            "portrait": "char_003_kalts/boc_6/avatar.png"
+          }
+        }
+      },
+      "char_010_chen": {
+        "skins": {
+          "sale#10": {
+            "name": "初晴",
+            "group": "忒斯特收藏/XI",
+            "avatar": "char_010_chen/sale_10/avatar.png",
+            "portrait": "char_010_chen/sale_10/avatar.png"
+          },
+          "nian#2": {
+            "name": "岁红霞",
+            "group": "0011制造/II",
+            "avatar": "char_010_chen/nian_2/avatar.png",
+            "portrait": "char_010_chen/nian_2/avatar.png"
+          }
+        }
+      },
+      "char_017_huang": {
+        "skins": {
+          "witch#5": {
+            "name": "易爆蓝焰",
+            "group": "巫异盛宴/V",
+            "avatar": "char_017_huang/witch_5/avatar.png",
+            "portrait": "char_017_huang/witch_5/avatar.png"
+          },
+          "as#1": {
+            "name": "爆裂菲林",
+            "group": "音律联觉",
+            "avatar": "char_017_huang/as_1/avatar.png",
+            "portrait": "char_017_huang/as_1/avatar.png"
+          }
+        }
+      },
+      "char_1012_skadi2": {
+        "skins": {
+          "boc#4": {
+            "name": "升华",
+            "group": "斗争血脉/IV",
+            "avatar": "char_1012_skadi2/boc_4/avatar.png",
+            "portrait": "char_1012_skadi2/boc_4/avatar.png"
+          },
+          "iteration#2": {
+            "name": "红女爵",
+            "group": "命途迭代/II",
+            "avatar": "char_1012_skadi2/iteration_2/avatar.png",
+            "portrait": "char_1012_skadi2/iteration_2/avatar.png"
+          }
+        }
+      },
+      "char_1013_chen2": {
+        "skins": {
+          "summer#20": {
+            "name": "悠然假日 HD79",
+            "group": "珊瑚海岸/XX",
+            "avatar": "char_1013_chen2/summer_20/avatar.png",
+            "portrait": "char_1013_chen2/summer_20/avatar.png"
+          },
+          "boc#6": {
+            "name": "万重山",
+            "group": "斗争血脉/VI",
+            "avatar": "char_1013_chen2/boc_6/avatar.png",
+            "portrait": "char_1013_chen2/boc_6/avatar.png"
+          }
+        }
+      },
+      "char_1014_nearl2": {
+        "skins": {
+          "epoque#17": {
+            "name": "复现荣光",
+            "group": "时代/XVII",
+            "avatar": "char_1014_nearl2/epoque_17/avatar.png",
+            "portrait": "char_1014_nearl2/epoque_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1014_nearl2/epoque_17/spine_front/char_1014_nearl2_epoque_17.skel"
+              },
+              "back": {
+                "skel": "char_1014_nearl2/epoque_17/spine_back/char_1014_nearl2_epoque_17.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1016_agoat2": {
+        "skins": {
+          "epoque#34": {
+            "name": "远行前的野餐",
+            "group": "时代/XXXIV",
+            "avatar": "char_1016_agoat2/epoque_34/avatar.png",
+            "portrait": "char_1016_agoat2/epoque_34/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1016_agoat2/epoque_34/spine_front/char_1016_agoat2_epoque_34.skel"
+              },
+              "back": {
+                "skel": "char_1016_agoat2/epoque_34/spine_back/char_1016_agoat2_epoque_34.skel"
+              }
+            }
+          },
+          "epoque#57": {
+            "name": "后来的故事",
+            "group": "时代/LVII",
+            "avatar": "char_1016_agoat2/epoque_57/avatar.png",
+            "portrait": "char_1016_agoat2/epoque_57/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1016_agoat2/epoque_57/spine_front/char_1016_agoat2_epoque_57.skel"
+              },
+              "back": {
+                "skel": "char_1016_agoat2/epoque_57/spine_back/char_1016_agoat2_epoque_57.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1019_siege2": {
+        "skins": {
+          "epoque#50": {
+            "name": "光耀之途",
+            "group": "时代/XLIX",
+            "avatar": "char_1019_siege2/epoque_50/avatar.png",
+            "portrait": "char_1019_siege2/epoque_50/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1019_siege2/epoque_50/spine_front/char_1019_siege2_epoque_50.skel"
+              },
+              "back": {
+                "skel": "char_1019_siege2/epoque_50/spine_back/char_1019_siege2_epoque_50.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1020_reed2": {
+        "skins": {
+          "epoque#30": {
+            "name": "博物",
+            "group": "时代/XXX",
+            "avatar": "char_1020_reed2/epoque_30/avatar.png",
+            "portrait": "char_1020_reed2/epoque_30/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1020_reed2/epoque_30/spine_front/char_1020_reed2_epoque_30.skel"
+              },
+              "back": {
+                "skel": "char_1020_reed2/epoque_30/spine_back/char_1020_reed2_epoque_30.skel"
+              }
+            }
+          },
+          "snow#8": {
+            "name": "闪焰之夜",
+            "group": "冰原信使/VIII",
+            "avatar": "char_1020_reed2/snow_8/avatar.png",
+            "portrait": "char_1020_reed2/snow_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1020_reed2/snow_8/spine_front/char_1020_reed2_snow_8.skel"
+              },
+              "back": {
+                "skel": "char_1020_reed2/snow_8/spine_back/char_1020_reed2_snow_8.skel"
+              }
+            }
+          },
+          "summer#17": {
+            "name": "夏卉 FA075",
+            "group": "珊瑚海岸/XVII",
+            "avatar": "char_1020_reed2/summer_17/avatar.png",
+            "portrait": "char_1020_reed2/summer_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1020_reed2/summer_17/spine_front/char_1020_reed2_summer_17.skel"
+              },
+              "back": {
+                "skel": "char_1020_reed2/summer_17/spine_back/char_1020_reed2_summer_17.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1021_kroos2": {
+        "skins": {
+          "game#3": {
+            "name": "新手光环",
+            "group": "成就之星/III",
+            "avatar": "char_1021_kroos2/game_3/avatar.png",
+            "portrait": "char_1021_kroos2/game_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1021_kroos2/game_3/spine_front/char_1021_kroos2_game_3.skel"
+              },
+              "back": {
+                "skel": "char_1021_kroos2/game_3/spine_back/char_1021_kroos2_game_3.skel"
+              }
+            }
+          },
+          "nian#8": {
+            "name": "廊下游",
+            "group": "0011制造/VII",
+            "avatar": "char_1021_kroos2/nian_8/avatar.png",
+            "portrait": "char_1021_kroos2/nian_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1021_kroos2/nian_8/spine_front/char_1021_kroos2_nian_8.skel"
+              },
+              "back": {
+                "skel": "char_1021_kroos2/nian_8/spine_back/char_1021_kroos2_nian_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1023_ghost2": {
+        "skins": {
+          "boc#6": {
+            "name": "生而为一",
+            "group": "斗争血脉/VI",
+            "avatar": "char_1023_ghost2/boc_6/avatar.png",
+            "portrait": "char_1023_ghost2/boc_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1023_ghost2/boc_6/spine_front/char_1023_ghost2_boc_6.skel"
+              },
+              "back": {
+                "skel": "char_1023_ghost2/boc_6/spine_back/char_1023_ghost2_boc_6.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1026_gvial2": {
+        "skins": {
+          "summer#12": {
+            "name": "悠然假日 HD26",
+            "group": "珊瑚海岸/XII",
+            "avatar": "char_1026_gvial2/summer_12/avatar.png",
+            "portrait": "char_1026_gvial2/summer_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1026_gvial2/summer_12/spine_front/char_1026_gvial2_summer_12.skel"
+              },
+              "back": {
+                "skel": "char_1026_gvial2/summer_12/spine_back/char_1026_gvial2_summer_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1028_texas2": {
+        "skins": {
+          "epoque#36": {
+            "name": "幽兰秘辛",
+            "group": "时代/XXXVI",
+            "avatar": "char_1028_texas2/epoque_36/avatar.png",
+            "portrait": "char_1028_texas2/epoque_36/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1028_texas2/epoque_36/spine_front/char_1028_texas2_epoque_36.skel"
+              },
+              "back": {
+                "skel": "char_1028_texas2/epoque_36/spine_back/char_1028_texas2_epoque_36.skel"
+              }
+            }
+          },
+          "iteration#1": {
+            "name": "破翼者",
+            "group": "命途迭代",
+            "avatar": "char_1028_texas2/iteration_1/avatar.png",
+            "portrait": "char_1028_texas2/iteration_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1028_texas2/iteration_1/spine_front/char_1028_texas2_iteration_1.skel"
+              },
+              "back": {
+                "skel": "char_1028_texas2/iteration_1/spine_back/char_1028_texas2_iteration_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_102_texas": {
+        "skins": {
+          "epoque#7": {
+            "name": "意志",
+            "group": "时代/VII",
+            "portrait": "char_102_texas/epoque7/avatar.png",
+            "avatar": "char_102_texas/epoque7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_102_texas/epoque7/spine_front/texas_epoque7.skel",
+                "textures": [
+                  "char_102_texas/epoque7/spine_front/char_102_texas_epoque_7.png"
+                ]
+              },
+              "back": {
+                "skel": "char_102_texas/epoque7/spine_back/texas_epoque7.skel",
+                "textures": [
+                  "char_102_texas/epoque7/spine_back/char_102_texas_epoque_7.png"
+                ]
+              }
+            }
+          },
+          "winter#1": {
+            "name": "寒冬信使",
+            "group": "寒武纪/I",
+            "avatar": "char_102_texas/winter_1/avatar.png",
+            "portrait": "char_102_texas/winter_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_102_texas/winter_1/spine_front/char_102_texas_winter_1.skel"
+              },
+              "back": {
+                "skel": "char_102_texas/winter_1/spine_back/char_102_texas_winter_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1031_slent2": {
+        "skins": {
+          "epoque#32": {
+            "name": "栖息",
+            "group": "时代/XXXII",
+            "avatar": "char_1031_slent2/epoque_32/avatar.png",
+            "portrait": "char_1031_slent2/epoque_32/avatar.png"
+          }
+        }
+      },
+      "char_1032_excu2": {
+        "skins": {
+          "sale#12": {
+            "name": "众志归一",
+            "group": "忒斯特收藏/XIII",
+            "avatar": "char_1032_excu2/sale_12/avatar.png",
+            "portrait": "char_1032_excu2/sale_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1032_excu2/sale_12/spine_front/char_1032_excu2_sale_12.skel"
+              },
+              "back": {
+                "skel": "char_1032_excu2/sale_12/spine_back/char_1032_excu2_sale_12.skel"
+              }
+            }
+          },
+          "sanrio#2": {
+            "name": "蒸汽寻踪者",
+            "group": "三丽鸥家族/II",
+            "avatar": "char_1032_excu2/sanrio_2/avatar.png",
+            "portrait": "char_1032_excu2/sanrio_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1032_excu2/sanrio_2/spine_front/char_1032_excu2_sanrio_2.skel"
+              },
+              "back": {
+                "skel": "char_1032_excu2/sanrio_2/spine_back/char_1032_excu2_sanrio_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1033_swire2": {
+        "skins": {
+          "ambienceSynesthesia#4": {
+            "name": "律动方格",
+            "group": "音律联觉/IV",
+            "avatar": "char_1033_swire2/ambienceSynesthesia_4/avatar.png",
+            "portrait": "char_1033_swire2/ambienceSynesthesia_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1033_swire2/ambienceSynesthesia_4/spine_front/char_1033_swire2_ambienceSynesthesia_4.skel"
+              },
+              "back": {
+                "skel": "char_1033_swire2/ambienceSynesthesia_4/spine_back/char_1033_swire2_ambienceSynesthesia_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1034_jesca2": {
+        "skins": {
+          "cfa#1": {
+            "name": "《上任达维镇》",
+            "group": "中国电影资料馆",
+            "avatar": "char_1034_jesca2/cfa_1/avatar.png",
+            "portrait": "char_1034_jesca2/cfa_1/avatar.png"
+          }
+        }
+      },
+      "char_1035_wisdel": {
+        "skins": {
+          "sale#14": {
+            "name": "超新星",
+            "group": "忒斯特收藏/XV",
+            "avatar": "char_1035_wisdel/sale_14/avatar.png",
+            "portrait": "char_1035_wisdel/sale_14/avatar.png"
+          },
+          "game#9": {
+            "name": "绝对主角",
+            "group": "成就之星/IX",
+            "avatar": "char_1035_wisdel/game_9/avatar.png",
+            "portrait": "char_1035_wisdel/game_9/avatar.png"
+          }
+        }
+      },
+      "char_1038_whitw2": {
+        "skins": {
+          "sale#15": {
+            "name": "无序的谦卑",
+            "group": "忒斯特收藏/XVII",
+            "avatar": "char_1038_whitw2/sale_15/avatar.png",
+            "portrait": "char_1038_whitw2/sale_15/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1038_whitw2/sale_15/spine_front/char_1038_whitw2_sale_15.skel"
+              },
+              "back": {
+                "skel": "char_1038_whitw2/sale_15/spine_back/char_1038_whitw2_sale_15.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1039_thorn2": {
+        "skins": {
+          "marthe#9": {
+            "name": "无际之帆",
+            "group": "玛尔特/IX",
+            "avatar": "char_1039_thorn2/marthe_9/avatar.png",
+            "portrait": "char_1039_thorn2/marthe_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1039_thorn2/marthe_9/spine_front/char_1039_thorn2_marthe_9.skel"
+              },
+              "back": {
+                "skel": "char_1039_thorn2/marthe_9/spine_back/char_1039_thorn2_marthe_9.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_103_angel": {
+        "skins": {
+          "kfc#1": {
+            "name": "城市骑手",
+            "group": "肯德基",
+            "avatar": "char_103_angel/kfc_1/avatar.png",
+            "portrait": "char_103_angel/kfc_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_103_angel/kfc_1/spine_front/char_103_angel_kfc_1.skel"
+              },
+              "back": {
+                "skel": "char_103_angel/kfc_1/spine_back/char_103_angel_kfc_1.skel"
+              }
+            }
+          },
+          "sale#8": {
+            "name": "午夜邮差",
+            "group": "忒斯特收藏/IX",
+            "avatar": "char_103_angel/sale_8/avatar.png",
+            "portrait": "char_103_angel/sale_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_103_angel/sale_8/spine_front/char_103_angel_sale_8.skel"
+              },
+              "back": {
+                "skel": "char_103_angel/sale_8/spine_back/char_103_angel_sale_8.skel"
+              }
+            }
+          },
+          "wild#1": {
+            "name": "野地秘行",
+            "group": "生命之地/I",
+            "avatar": "char_103_angel/wild_1/avatar.png",
+            "portrait": "char_103_angel/wild_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_103_angel/wild_1/spine_front/char_103_angel_wild_1.skel"
+              },
+              "back": {
+                "skel": "char_103_angel/wild_1/spine_back/char_103_angel_wild_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1040_blaze2": {
+        "skins": {
+          "winter#5": {
+            "name": "夜归人",
+            "group": "寒武纪/V",
+            "avatar": "char_1040_blaze2/winter_5/avatar.png",
+            "portrait": "char_1040_blaze2/winter_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1040_blaze2/winter_5/spine_front/char_1040_blaze2_winter_5.skel"
+              },
+              "back": {
+                "skel": "char_1040_blaze2/winter_5/spine_back/char_1040_blaze2_winter_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1041_angel2": {
+        "skins": {
+          "iteration#6": {
+            "name": "寻翼之歌",
+            "group": "命途迭代/VI",
+            "avatar": "char_1041_angel2/iteration_6/avatar.png",
+            "portrait": "char_1041_angel2/iteration_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1041_angel2/iteration_6/spine_front/char_1041_angel2_iteration_6.skel"
+              },
+              "back": {
+                "skel": "char_1041_angel2/iteration_6/spine_back/char_1041_angel2_iteration_6.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1042_phatm2": {
+        "skins": {
+          "sightseer#4": {
+            "name": "真我自扼",
+            "group": "错位巡礼/IV",
+            "avatar": "char_1042_phatm2/sightseer_4/avatar.png",
+            "portrait": "char_1042_phatm2/sightseer_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1042_phatm2/sightseer_4/spine_front/char_1042_phatm2_sightseer_4.skel"
+              },
+              "back": {
+                "skel": "char_1042_phatm2/sightseer_4/spine_back/char_1042_phatm2_sightseer_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_1043_leizi2": {
+        "skins": {
+          "game#8": {
+            "name": "血翼蔷薇",
+            "group": "成就之星/VIII",
+            "avatar": "char_1043_leizi2/game_8/avatar.png",
+            "portrait": "char_1043_leizi2/game_8/avatar.png"
+          }
+        }
+      },
+      "char_1044_hsgma2": {
+        "skins": {
+          "whirlwind#11": {
+            "name": "一闪极意",
+            "group": "0011/飙系列/XI",
+            "avatar": "char_1044_hsgma2/whirlwind_11/avatar.png",
+            "portrait": "char_1044_hsgma2/whirlwind_11/avatar.png"
+          }
+        }
+      },
+      "char_1046_sbell2": {
+        "skins": {
+          "ambienceSynesthesia#8": {
+            "name": "曙光祝颂",
+            "group": "音律联觉/IX",
+            "avatar": "char_1046_sbell2/ambienceSynesthesia_8/avatar.png",
+            "portrait": "char_1046_sbell2/ambienceSynesthesia_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_1046_sbell2/ambienceSynesthesia_8/spine_front/char_1046_sbell2_ambienceSynesthesia_8.skel"
+              },
+              "back": {
+                "skel": "char_1046_sbell2/ambienceSynesthesia_8/spine_back/char_1046_sbell2_ambienceSynesthesia_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_107_liskam": {
+        "skins": {
+          "nian#2": {
+            "name": "春竜",
+            "group": "0011制造/II",
+            "avatar": "char_107_liskam/nian_2/avatar.png",
+            "portrait": "char_107_liskam/nian_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_107_liskam/nian_2/spine_front/char_107_liskam_nian_2.skel"
+              },
+              "back": {
+                "skel": "char_107_liskam/nian_2/spine_back/char_107_liskam_nian_2.skel"
+              }
+            }
+          },
+          "striker#1": {
+            "name": "超载",
+            "group": "雷神推进者",
+            "avatar": "char_107_liskam/striker_1/avatar.png",
+            "portrait": "char_107_liskam/striker_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_107_liskam/striker_1/spine_front/char_107_liskam_striker_1.skel"
+              },
+              "back": {
+                "skel": "char_107_liskam/striker_1/spine_back/char_107_liskam_striker_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_108_silent": {
+        "skins": {
+          "sweep#1": {
+            "name": "漆匠",
+            "group": "雷神开拓者",
+            "avatar": "char_108_silent/sweep_1/avatar.png",
+            "portrait": "char_108_silent/sweep_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_108_silent/sweep_1/spine_front/char_108_silent_sweep_1.skel"
+              },
+              "back": {
+                "skel": "char_108_silent/sweep_1/spine_back/char_108_silent_sweep_1.skel"
+              }
+            }
+          },
+          "winter#2": {
+            "name": "霜息",
+            "group": "寒武纪/II",
+            "avatar": "char_108_silent/winter_2/avatar.png",
+            "portrait": "char_108_silent/winter_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_108_silent/winter_2/spine_front/char_108_silent_winter_2.skel"
+              },
+              "back": {
+                "skel": "char_108_silent/winter_2/spine_back/char_108_silent_winter_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_109_fmout": {
+        "skins": {
+          "epoque#2": {
+            "name": "未知的旅行",
+            "group": "时代/II",
+            "avatar": "char_109_fmout/epoque_2/avatar.png",
+            "portrait": "char_109_fmout/epoque_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_109_fmout/epoque_2/spine_front/char_109_fmout_epoque_2.skel"
+              },
+              "back": {
+                "skel": "char_109_fmout/epoque_2/spine_back/char_109_fmout_epoque_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_112_siege": {
+        "skins": {
+          "wild#2": {
+            "name": "遗石",
+            "group": "生命之地/II",
+            "avatar": "char_112_siege/wild_2/avatar.png",
+            "portrait": "char_112_siege/wild_2/avatar.png"
+          },
+          "striker#2": {
+            "name": "摧城",
+            "group": "雷神推进者/II",
+            "avatar": "char_112_siege/striker_2/avatar.png",
+            "portrait": "char_112_siege/striker_2/avatar.png"
+          }
+        }
+      },
+      "char_113_cqbw": {
+        "skins": {
+          "epoque#7": {
+            "name": "恍惚",
+            "group": "时代/VII",
+            "avatar": "char_113_cqbw/epoque_7/avatar.png",
+            "portrait": "char_113_cqbw/epoque_7/avatar.png"
+          }
+        }
+      },
+      "char_126_shotst": {
+        "skins": {
+          "epoque#10": {
+            "name": "诗人的假日",
+            "group": "时代/X",
+            "avatar": "char_126_shotst/epoque_10/avatar.png",
+            "portrait": "char_126_shotst/epoque_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_126_shotst/epoque_10/spine_front/char_126_shotst_epoque_10.skel"
+              },
+              "back": {
+                "skel": "char_126_shotst/epoque_10/spine_back/char_126_shotst_epoque_10.skel"
+              }
+            }
+          },
+          "epoque#28": {
+            "name": "星橼林",
+            "group": "时代/XXVIII",
+            "avatar": "char_126_shotst/epoque_28/avatar.png",
+            "portrait": "char_126_shotst/epoque_28/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_126_shotst/epoque_28/spine_front/char_126_shotst_epoque_28.skel"
+              },
+              "back": {
+                "skel": "char_126_shotst/epoque_28/spine_back/char_126_shotst_epoque_28.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_127_estell": {
+        "skins": {
+          "epoque#50": {
+            "name": "花冕圆舞曲",
+            "group": "时代/XLIX",
+            "avatar": "char_127_estell/epoque_50/avatar.png",
+            "portrait": "char_127_estell/epoque_50/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_127_estell/epoque_50/spine_front/char_127_estell_epoque_50.skel"
+              },
+              "back": {
+                "skel": "char_127_estell/epoque_50/spine_back/char_127_estell_epoque_50.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_128_plosis": {
+        "skins": {
+          "epoque#3": {
+            "name": "幽静",
+            "group": "时代/III",
+            "avatar": "char_128_plosis/epoque_3/avatar.png",
+            "portrait": "char_128_plosis/epoque_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_128_plosis/epoque_3/spine_front/char_128_plosis_epoque_3.skel"
+              },
+              "back": {
+                "skel": "char_128_plosis/epoque_3/spine_back/char_128_plosis_epoque_3.skel"
+              }
+            }
+          },
+          "yun#4": {
+            "name": "抚云间",
+            "group": "0011/韵系列/IV",
+            "avatar": "char_128_plosis/yun_4/avatar.png",
+            "portrait": "char_128_plosis/yun_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_128_plosis/yun_4/spine_front/char_128_plosis_yun_4.skel"
+              },
+              "back": {
+                "skel": "char_128_plosis/yun_4/spine_back/char_128_plosis_yun_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_133_mm": {
+        "skins": {
+          "summer#20": {
+            "name": "夏卉 FA054",
+            "group": "珊瑚海岸/XX",
+            "avatar": "char_133_mm/summer_20/avatar.png",
+            "portrait": "char_133_mm/summer_20/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_133_mm/summer_20/spine_front/char_133_mm_summer_20.skel"
+              },
+              "back": {
+                "skel": "char_133_mm/summer_20/spine_back/char_133_mm_summer_20.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_134_ifrit": {
+        "skins": {
+          "summer#1": {
+            "name": "日晒 SS SP",
+            "group": "珊瑚海岸/I",
+            "avatar": "char_134_ifrit/summer_1/avatar.png",
+            "portrait": "char_134_ifrit/summer_1/avatar.png"
+          },
+          "kfc#1": {
+            "name": "儿童派对",
+            "group": "肯德基",
+            "avatar": "char_134_ifrit/kfc_1/avatar.png",
+            "portrait": "char_134_ifrit/kfc_1/avatar.png"
+          },
+          "rilakkuma#1": {
+            "name": "轻松旅途",
+            "group": "轻松小熊",
+            "avatar": "char_134_ifrit/rilakkuma_1/avatar.png",
+            "portrait": "char_134_ifrit/rilakkuma_1/avatar.png"
+          }
+        }
+      },
+      "char_135_halo": {
+        "skins": {
+          "epoque#25": {
+            "name": "所愿",
+            "group": "时代/XXV",
+            "avatar": "char_135_halo/epoque_25/avatar.png",
+            "portrait": "char_135_halo/epoque_25/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_135_halo/epoque_25/spine_front/char_135_halo_epoque_25.skel"
+              },
+              "back": {
+                "skel": "char_135_halo/epoque_25/spine_back/char_135_halo_epoque_25.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_136_hsguma": {
+        "skins": {
+          "nian#3": {
+            "name": "狩标浪人",
+            "group": "0011/飙系列",
+            "avatar": "char_136_hsguma/nian_3/avatar.png",
+            "portrait": "char_136_hsguma/nian_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_136_hsguma/nian_3/spine_front/char_136_hsguma_nian_3.skel"
+              },
+              "back": {
+                "skel": "char_136_hsguma/nian_3/spine_back/char_136_hsguma_nian_3.skel"
+              }
+            }
+          },
+          "summer#16": {
+            "name": "探寻者 SK97",
+            "group": "珊瑚海岸/XVI",
+            "avatar": "char_136_hsguma/summer_16/avatar.png",
+            "portrait": "char_136_hsguma/summer_16/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_136_hsguma/summer_16/spine_front/char_136_hsguma_summer_16.skel"
+              },
+              "back": {
+                "skel": "char_136_hsguma/summer_16/spine_back/char_136_hsguma_summer_16.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_140_whitew": {
+        "skins": {
+          "boc#1": {
+            "name": "典雅噩兆",
+            "group": "斗争血脉/I",
+            "avatar": "char_140_whitew/boc_1/avatar.png",
+            "portrait": "char_140_whitew/boc_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_140_whitew/boc_1/spine_front/char_140_whitew_boc_1.skel"
+              },
+              "back": {
+                "skel": "char_140_whitew/boc_1/spine_back/char_140_whitew_boc_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_143_ghost": {
+        "skins": {
+          "winter#1": {
+            "name": "暗流",
+            "group": "寒武纪/I",
+            "avatar": "char_143_ghost/winter_1/avatar.png",
+            "portrait": "char_143_ghost/winter_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_143_ghost/winter_1/spine_front/char_143_ghost_winter_1.skel"
+              },
+              "back": {
+                "skel": "char_143_ghost/winter_1/spine_back/char_143_ghost_winter_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_145_prove": {
+        "skins": {
+          "summer#3": {
+            "name": "悠然假日 HD08",
+            "group": "珊瑚海岸/III",
+            "avatar": "char_145_prove/summer_3/avatar.png",
+            "portrait": "char_145_prove/summer_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_145_prove/summer_3/spine_front/char_145_prove_summer_3.skel"
+              },
+              "back": {
+                "skel": "char_145_prove/summer_3/spine_back/char_145_prove_summer_3.skel"
+              }
+            }
+          },
+          "wild#5": {
+            "name": "荒原行者",
+            "group": "生命之地/V",
+            "avatar": "char_145_prove/wild_5/avatar.png",
+            "portrait": "char_145_prove/wild_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_145_prove/wild_5/spine_front/char_145_prove_wild_5.skel"
+              },
+              "back": {
+                "skel": "char_145_prove/wild_5/spine_back/char_145_prove_wild_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_147_shining": {
+        "skins": {
+          "summer#1": {
+            "name": "静谧午夜 DN02",
+            "group": "珊瑚海岸/I",
+            "avatar": "char_147_shining/summer_1/avatar.png",
+            "portrait": "char_147_shining/summer_1/avatar.png"
+          }
+        }
+      },
+      "char_1502_crosly": {
+        "skins": {
+          "iteration#5": {
+            "name": "夜之终局",
+            "group": "命途迭代/V",
+            "avatar": "char_1502_crosly/iteration_5/avatar.png",
+            "portrait": "char_1502_crosly/iteration_5/avatar.png"
+          }
+        }
+      },
+      "char_150_snakek": {
+        "skins": {
+          "wild#1": {
+            "name": "四边形",
+            "group": "生命之地/I",
+            "avatar": "char_150_snakek/wild_1/avatar.png",
+            "portrait": "char_150_snakek/wild_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_150_snakek/wild_1/spine_front/char_150_snakek_wild_1.skel"
+              },
+              "back": {
+                "skel": "char_150_snakek/wild_1/spine_back/char_150_snakek_wild_1.skel"
+              }
+            }
+          },
+          "yun#7": {
+            "name": "与荷",
+            "group": "0011/韵系列/VII",
+            "avatar": "char_150_snakek/yun_7/avatar.png",
+            "portrait": "char_150_snakek/yun_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_150_snakek/yun_7/spine_front/char_150_snakek_yun_7.skel"
+              },
+              "back": {
+                "skel": "char_150_snakek/yun_7/spine_back/char_150_snakek_yun_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_171_bldsk": {
+        "skins": {
+          "summer#7": {
+            "name": "悠然假日 HD31",
+            "group": "珊瑚海岸/VII",
+            "avatar": "char_171_bldsk/summer_7/avatar.png",
+            "portrait": "char_171_bldsk/summer_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_171_bldsk/summer_7/spine_front/char_171_bldsk_summer_7.skel"
+              },
+              "back": {
+                "skel": "char_171_bldsk/summer_7/spine_back/char_171_bldsk_summer_7.skel"
+              }
+            }
+          },
+          "witch#1": {
+            "name": "盛宴",
+            "group": "巫异盛宴 ",
+            "avatar": "char_171_bldsk/witch_1/avatar.png",
+            "portrait": "char_171_bldsk/witch_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_171_bldsk/witch_1/spine_front/char_171_bldsk_witch_1.skel"
+              },
+              "back": {
+                "skel": "char_171_bldsk/witch_1/spine_back/char_171_bldsk_witch_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_172_svrash": {
+        "skins": {
+          "ambienceSynesthesia#4": {
+            "name": "不融冰",
+            "group": "音律联觉/IV",
+            "avatar": "char_172_svrash/ambienceSynesthesia_4/avatar.png",
+            "portrait": "char_172_svrash/ambienceSynesthesia_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_172_svrash/ambienceSynesthesia_4/spine_front/char_172_svrash_ambienceSynesthesia_4.skel"
+              },
+              "back": {
+                "skel": "char_172_svrash/ambienceSynesthesia_4/spine_back/char_172_svrash_ambienceSynesthesia_4.skel"
+              }
+            }
+          },
+          "snow#1": {
+            "name": "约克的寒风",
+            "group": "冰原信使/I",
+            "avatar": "char_172_svrash/snow_1/avatar.png",
+            "portrait": "char_172_svrash/snow_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_172_svrash/snow_1/spine_front/char_172_svrash_snow_1.skel"
+              },
+              "back": {
+                "skel": "char_172_svrash/snow_1/spine_back/char_172_svrash_snow_1.skel"
+              }
+            }
+          },
+          "summer#4": {
+            "name": "探寻者 SKm01",
+            "group": "珊瑚海岸/IV",
+            "avatar": "char_172_svrash/summer_4/avatar.png",
+            "portrait": "char_172_svrash/summer_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_172_svrash/summer_4/spine_front/char_172_svrash_summer_4.skel"
+              },
+              "back": {
+                "skel": "char_172_svrash/summer_4/spine_back/char_172_svrash_summer_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_173_slchan": {
+        "skins": {
+          "wild#1": {
+            "name": "孤攀客",
+            "group": "生命之地/I",
+            "avatar": "char_173_slchan/wild_1/avatar.png",
+            "portrait": "char_173_slchan/wild_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_173_slchan/wild_1/spine_front/char_173_slchan_wild_1.skel"
+              },
+              "back": {
+                "skel": "char_173_slchan/wild_1/spine_back/char_173_slchan_wild_1.skel"
+              }
+            }
+          },
+          "wwf#1": {
+            "name": "高原访客",
+            "group": "WWF",
+            "avatar": "char_173_slchan/wwf_1/avatar.png",
+            "portrait": "char_173_slchan/wwf_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_173_slchan/wwf_1/spine_front/char_173_slchan_wwf_1.skel"
+              },
+              "back": {
+                "skel": "char_173_slchan/wwf_1/spine_back/char_173_slchan_wwf_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_174_slbell": {
+        "skins": {
+          "snow#1": {
+            "name": "开斯特之霜",
+            "group": "冰原信使/I",
+            "avatar": "char_174_slbell/snow_1/avatar.png",
+            "portrait": "char_174_slbell/snow_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_174_slbell/snow_1/spine_front/char_174_slbell_snow_1.skel"
+              },
+              "back": {
+                "skel": "char_174_slbell/snow_1/spine_back/char_174_slbell_snow_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_179_cgbird": {
+        "skins": {
+          "witch#1": {
+            "name": "挽歌",
+            "group": "巫异盛宴 ",
+            "avatar": "char_179_cgbird/witch_1/avatar.png",
+            "portrait": "char_179_cgbird/witch_1/avatar.png"
+          },
+          "sightseer#1": {
+            "name": "流辉",
+            "group": "错位巡礼/I",
+            "avatar": "char_179_cgbird/sightseer_1/avatar.png",
+            "portrait": "char_179_cgbird/sightseer_1/avatar.png"
+          }
+        }
+      },
+      "char_180_amgoat": {
+        "skins": {
+          "summer#5": {
+            "name": "夏卉 FA018",
+            "group": "珊瑚海岸/V",
+            "avatar": "char_180_amgoat/summer_5/avatar.png",
+            "portrait": "char_180_amgoat/summer_5/avatar.png"
+          },
+          "sanrio#2": {
+            "name": "绵绒小魔女",
+            "group": "三丽鸥家族/II",
+            "avatar": "char_180_amgoat/sanrio_2/avatar.png",
+            "portrait": "char_180_amgoat/sanrio_2/avatar.png"
+          }
+        }
+      },
+      "char_181_flower": {
+        "skins": {
+          "daily#1": {
+            "name": "植物种志",
+            "group": "忒斯特收藏/I",
+            "avatar": "char_181_flower/daily_1/avatar.png",
+            "portrait": "char_181_flower/daily_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_181_flower/daily_1/spine_front/char_181_flower_daily_1.skel"
+              },
+              "back": {
+                "skel": "char_181_flower/daily_1/spine_back/char_181_flower_daily_1.skel"
+              }
+            }
+          },
+          "epoque#9": {
+            "name": "闲适午后",
+            "group": "时代/IX",
+            "avatar": "char_181_flower/epoque_9/avatar.png",
+            "portrait": "char_181_flower/epoque_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_181_flower/epoque_9/spine_front/char_181_flower_epoque_9.skel"
+              },
+              "back": {
+                "skel": "char_181_flower/epoque_9/spine_back/char_181_flower_epoque_9.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_183_skgoat": {
+        "skins": {
+          "epoque#30": {
+            "name": "主修领域",
+            "group": "时代/XXX",
+            "avatar": "char_183_skgoat/epoque_30/avatar.png",
+            "portrait": "char_183_skgoat/epoque_30/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_183_skgoat/epoque_30/spine_front/char_183_skgoat_epoque_30.skel"
+              },
+              "back": {
+                "skel": "char_183_skgoat/epoque_30/spine_back/char_183_skgoat_epoque_30.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_188_helage": {
+        "skins": {
+          "boc#2": {
+            "name": "歧路幻影",
+            "group": "斗争血脉/II",
+            "avatar": "char_188_helage/boc_2/avatar.png",
+            "portrait": "char_188_helage/boc_2/avatar.png"
+          }
+        }
+      },
+      "char_196_sunbr": {
+        "skins": {
+          "summer#1": {
+            "name": "夏卉 FA011",
+            "group": "珊瑚海岸/I",
+            "avatar": "char_196_sunbr/summer_1/avatar.png",
+            "portrait": "char_196_sunbr/summer_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_196_sunbr/summer_1/spine_front/char_196_sunbr_summer_1.skel"
+              },
+              "back": {
+                "skel": "char_196_sunbr/summer_1/spine_back/char_196_sunbr_summer_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_197_poca": {
+        "skins": {
+          "epoque#12": {
+            "name": "杰作",
+            "group": "时代/XII",
+            "avatar": "char_197_poca/epoque_12/avatar.png",
+            "portrait": "char_197_poca/epoque_12/avatar.png"
+          },
+          "rilakkuma#1": {
+            "name": "常伴我身",
+            "group": "轻松小熊",
+            "avatar": "char_197_poca/rilakkuma_1/avatar.png",
+            "portrait": "char_197_poca/rilakkuma_1/avatar.png"
+          }
+        }
+      },
+      "char_198_blackd": {
+        "skins": {
+          "winter#1": {
+            "name": "新航线",
+            "group": "寒武纪/I",
+            "avatar": "char_198_blackd/winter_1/avatar.png",
+            "portrait": "char_198_blackd/winter_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_198_blackd/winter_1/spine_front/char_198_blackd_winter_1.skel"
+              },
+              "back": {
+                "skel": "char_198_blackd/winter_1/spine_back/char_198_blackd_winter_1.skel"
+              }
+            }
+          },
+          "as#1": {
+            "name": "无言狂响",
+            "group": "音律联觉",
+            "avatar": "char_198_blackd/as_1/avatar.png",
+            "portrait": "char_198_blackd/as_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_198_blackd/as_1/spine_front/char_198_blackd_as_1.skel"
+              },
+              "back": {
+                "skel": "char_198_blackd/as_1/spine_back/char_198_blackd_as_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_199_yak": {
+        "skins": {
+          "summer#1": {
+            "name": "沙滩护卫 GT.001",
+            "group": "珊瑚海岸/I",
+            "avatar": "char_199_yak/summer_1/avatar.png",
+            "portrait": "char_199_yak/summer_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_199_yak/summer_1/spine_front/char_199_yak_summer_1.skel"
+              },
+              "back": {
+                "skel": "char_199_yak/summer_1/spine_back/char_199_yak_summer_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_2012_typhon": {
+        "skins": {
+          "summer#17": {
+            "name": "温差 RT RX07",
+            "group": "珊瑚海岸/XVII",
+            "avatar": "char_2012_typhon/summer_17/avatar.png",
+            "portrait": "char_2012_typhon/summer_17/avatar.png"
+          },
+          "wild#9": {
+            "name": "北地引路人",
+            "group": "生命之地/IX",
+            "avatar": "char_2012_typhon/wild_9/avatar.png",
+            "portrait": "char_2012_typhon/wild_9/avatar.png"
+          }
+        }
+      },
+      "char_2013_cerber": {
+        "skins": {
+          "whirlwind#2": {
+            "name": "无拘无束",
+            "group": "0011/飙系列/II",
+            "avatar": "char_2013_cerber/whirlwind_2/avatar.png",
+            "portrait": "char_2013_cerber/whirlwind_2/avatar.png"
+          },
+          "summer#4": {
+            "name": "夏卉 FA333",
+            "group": "珊瑚海岸/IV",
+            "avatar": "char_2013_cerber/summer_4/avatar.png",
+            "portrait": "char_2013_cerber/summer_4/avatar.png"
+          }
+        }
+      },
+      "char_2014_nian": {
+        "skins": {
+          "nian#4": {
+            "name": "乐逍遥",
+            "group": "0011制造/III",
+            "avatar": "char_2014_nian/nian_4/avatar.png",
+            "portrait": "char_2014_nian/nian_4/avatar.png"
+          },
+          "cfa#1": {
+            "name": "霹雳导演",
+            "group": "中国电影资料馆",
+            "avatar": "char_2014_nian/cfa_1/avatar.png",
+            "portrait": "char_2014_nian/cfa_1/avatar.png"
+          }
+        }
+      },
+      "char_2015_dusk": {
+        "skins": {
+          "nian#12": {
+            "name": "青玉砚",
+            "group": "0011制造/XII",
+            "avatar": "char_2015_dusk/nian_12/avatar.png",
+            "portrait": "char_2015_dusk/nian_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_2015_dusk/nian_12/spine_front/char_2015_dusk_nian_12.skel"
+              },
+              "back": {
+                "skel": "char_2015_dusk/nian_12/spine_back/char_2015_dusk_nian_12.skel"
+              }
+            }
+          },
+          "nian#7": {
+            "name": "染尘烟",
+            "group": "0011制造/VI",
+            "avatar": "char_2015_dusk/nian_7/avatar.png",
+            "portrait": "char_2015_dusk/nian_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_2015_dusk/nian_7/spine_front/char_2015_dusk_nian_7.skel"
+              },
+              "back": {
+                "skel": "char_2015_dusk/nian_7/spine_back/char_2015_dusk_nian_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_2023_ling": {
+        "skins": {
+          "nian#9": {
+            "name": "濯缨",
+            "group": "0011制造/VIII",
+            "avatar": "char_2023_ling/nian_9/avatar.png",
+            "portrait": "char_2023_ling/nian_9/avatar.png"
+          },
+          "nian#12": {
+            "name": "方遒卷",
+            "group": "0011制造/XII",
+            "avatar": "char_2023_ling/nian_12/avatar.png",
+            "portrait": "char_2023_ling/nian_12/avatar.png"
+          },
+          "ncg#1": {
+            "name": "崖高梦远",
+            "group": "国家地理",
+            "avatar": "char_2023_ling/ncg_1/avatar.png",
+            "portrait": "char_2023_ling/ncg_1/avatar.png"
+          }
+        }
+      },
+      "char_2024_chyue": {
+        "skins": {
+          "nian#10": {
+            "name": "何处栖",
+            "group": "0011制造/IX",
+            "avatar": "char_2024_chyue/nian_10/avatar.png",
+            "portrait": "char_2024_chyue/nian_10/avatar.png"
+          },
+          "cfa#1": {
+            "name": "全能演员",
+            "group": "中国电影资料馆",
+            "avatar": "char_2024_chyue/cfa_1/avatar.png",
+            "portrait": "char_2024_chyue/cfa_1/avatar.png"
+          }
+        }
+      },
+      "char_2025_shu": {
+        "skins": {
+          "nian#11": {
+            "name": "春日宴",
+            "group": "0011制造/XI",
+            "avatar": "char_2025_shu/nian_11/avatar.png",
+            "portrait": "char_2025_shu/nian_11/avatar.png"
+          }
+        }
+      },
+      "char_2026_yu": {
+        "skins": {
+          "nian#12": {
+            "name": "愿清晓",
+            "group": "0011制造/XII",
+            "avatar": "char_2026_yu/nian_12/avatar.png",
+            "portrait": "char_2026_yu/nian_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_2026_yu/nian_12/spine_front/char_2026_yu_nian_12.skel"
+              },
+              "back": {
+                "skel": "char_2026_yu/nian_12/spine_back/char_2026_yu_nian_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_202_demkni": {
+        "skins": {
+          "ambienceSynesthesia#7": {
+            "name": "黑白冷峻",
+            "group": "音律联觉/VIII",
+            "avatar": "char_202_demkni/ambienceSynesthesia_7/avatar.png",
+            "portrait": "char_202_demkni/ambienceSynesthesia_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_202_demkni/ambienceSynesthesia_7/spine_front/char_202_demkni_ambienceSynesthesia_7.skel"
+              },
+              "back": {
+                "skel": "char_202_demkni/ambienceSynesthesia_7/spine_back/char_202_demkni_ambienceSynesthesia_7.skel"
+              }
+            }
+          },
+          "boc#1": {
+            "name": "坚城",
+            "group": "斗争血脉/I",
+            "avatar": "char_202_demkni/boc_1/avatar.png",
+            "portrait": "char_202_demkni/boc_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_202_demkni/boc_1/spine_front/char_202_demkni_boc_1.skel"
+              },
+              "back": {
+                "skel": "char_202_demkni/boc_1/spine_back/char_202_demkni_boc_1.skel"
+              }
+            }
+          },
+          "test#1": {
+            "name": "铁律",
+            "group": "忒斯特收藏/III",
+            "avatar": "char_202_demkni/test_1/avatar.png",
+            "portrait": "char_202_demkni/test_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_202_demkni/test_1/spine_front/char_202_demkni_test_1.skel"
+              },
+              "back": {
+                "skel": "char_202_demkni/test_1/spine_back/char_202_demkni_test_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_206_gnosis": {
+        "skins": {
+          "boc#4": {
+            "name": "先驱",
+            "group": "斗争血脉/IV",
+            "avatar": "char_206_gnosis/boc_4/avatar.png",
+            "portrait": "char_206_gnosis/boc_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_206_gnosis/boc_4/spine_front/char_206_gnosis_boc_4.skel"
+              },
+              "back": {
+                "skel": "char_206_gnosis/boc_4/spine_back/char_206_gnosis_boc_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_213_mostma": {
+        "skins": {
+          "ambienceSynesthesia#6": {
+            "name": "幻语乐痕",
+            "group": "音律联觉/VI",
+            "avatar": "char_213_mostma/ambienceSynesthesia_6/avatar.png",
+            "portrait": "char_213_mostma/ambienceSynesthesia_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_213_mostma/ambienceSynesthesia_6/spine_front/char_213_mostma_ambienceSynesthesia_6.skel"
+              },
+              "back": {
+                "skel": "char_213_mostma/ambienceSynesthesia_6/spine_back/char_213_mostma_ambienceSynesthesia_6.skel"
+              }
+            }
+          },
+          "epoque#5": {
+            "name": "除魅",
+            "group": "时代/V",
+            "avatar": "char_213_mostma/epoque_5/avatar.png",
+            "portrait": "char_213_mostma/epoque_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_213_mostma/epoque_5/spine_front/char_213_mostma_epoque_5.skel"
+              },
+              "back": {
+                "skel": "char_213_mostma/epoque_5/spine_back/char_213_mostma_epoque_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_215_mantic": {
+        "skins": {
+          "epoque#4": {
+            "name": "无形悼挽",
+            "group": "时代/IV",
+            "avatar": "char_215_mantic/epoque_4/avatar.png",
+            "portrait": "char_215_mantic/epoque_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_215_mantic/epoque_4/spine_front/char_215_mantic_epoque_4.skel"
+              },
+              "back": {
+                "skel": "char_215_mantic/epoque_4/spine_back/char_215_mantic_epoque_4.skel"
+              }
+            }
+          },
+          "epoque#19": {
+            "name": "面纱之下",
+            "group": "时代/XX",
+            "avatar": "char_215_mantic/epoque_19/avatar.png",
+            "portrait": "char_215_mantic/epoque_19/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_215_mantic/epoque_19/spine_front/char_215_mantic_epoque_19.skel"
+              },
+              "back": {
+                "skel": "char_215_mantic/epoque_19/spine_back/char_215_mantic_epoque_19.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_218_cuttle": {
+        "skins": {
+          "epoque#12": {
+            "name": "暗矢",
+            "group": "时代/XII",
+            "avatar": "char_218_cuttle/epoque_12/avatar.png",
+            "portrait": "char_218_cuttle/epoque_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_218_cuttle/epoque_12/spine_front/char_218_cuttle_epoque_12.skel"
+              },
+              "back": {
+                "skel": "char_218_cuttle/epoque_12/spine_back/char_218_cuttle_epoque_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_222_bpipe": {
+        "skins": {
+          "epoque#28": {
+            "name": "皇家近卫",
+            "group": "时代/XXVIII",
+            "avatar": "char_222_bpipe/epoque_28/avatar.png",
+            "portrait": "char_222_bpipe/epoque_28/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_222_bpipe/epoque_28/spine_front/char_222_bpipe_epoque_28.skel"
+              },
+              "back": {
+                "skel": "char_222_bpipe/epoque_28/spine_back/char_222_bpipe_epoque_28.skel"
+              }
+            }
+          },
+          "epoque#40": {
+            "name": "风笛声声",
+            "group": "时代/XXXIX",
+            "avatar": "char_222_bpipe/epoque_40/avatar.png",
+            "portrait": "char_222_bpipe/epoque_40/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_222_bpipe/epoque_40/spine_front/char_222_bpipe_epoque_40.skel"
+              },
+              "back": {
+                "skel": "char_222_bpipe/epoque_40/spine_back/char_222_bpipe_epoque_40.skel"
+              }
+            }
+          },
+          "race#1": {
+            "name": "皇后一号",
+            "group": "啸风",
+            "avatar": "char_222_bpipe/race_1/avatar.png",
+            "portrait": "char_222_bpipe/race_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_222_bpipe/race_1/spine_front/char_222_bpipe_race_1.skel"
+              },
+              "back": {
+                "skel": "char_222_bpipe/race_1/spine_back/char_222_bpipe_race_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_225_haak": {
+        "skins": {
+          "nian#4": {
+            "name": "百面郎中",
+            "group": "0011制造/III",
+            "avatar": "char_225_haak/nian_4/avatar.png",
+            "portrait": "char_225_haak/nian_4/avatar.png"
+          },
+          "nian#5": {
+            "name": "妙手玄心",
+            "group": "0011制造/IV",
+            "avatar": "char_225_haak/nian_5/avatar.png",
+            "portrait": "char_225_haak/nian_5/avatar.png"
+          }
+        }
+      },
+      "char_230_savage": {
+        "skins": {
+          "sale#17": {
+            "name": "又一年秋季",
+            "group": "忒斯特收藏/XIX",
+            "avatar": "char_230_savage/sale_17/avatar.png",
+            "portrait": "char_230_savage/sale_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_230_savage/sale_17/spine_front/char_230_savage_sale_17.skel"
+              },
+              "back": {
+                "skel": "char_230_savage/sale_17/spine_back/char_230_savage_sale_17.skel"
+              }
+            }
+          },
+          "boc#8": {
+            "name": "地底三百米",
+            "group": "斗争血脉/VIII",
+            "avatar": "char_230_savage/boc_8/avatar.png",
+            "portrait": "char_230_savage/boc_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_230_savage/boc_8/spine_front/char_230_savage_boc_8.skel"
+              },
+              "back": {
+                "skel": "char_230_savage/boc_8/spine_back/char_230_savage_boc_8.skel"
+              }
+            }
+          },
+          "kitchen#3": {
+            "name": "家传秘方",
+            "group": "罗德厨房/III",
+            "avatar": "char_230_savage/kitchen_3/avatar.png",
+            "portrait": "char_230_savage/kitchen_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_230_savage/kitchen_3/spine_front/char_230_savage_kitchen_3.skel"
+              },
+              "back": {
+                "skel": "char_230_savage/kitchen_3/spine_back/char_230_savage_kitchen_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_237_gravel": {
+        "skins": {
+          "winter#2": {
+            "name": "模特之夜",
+            "group": "寒武纪/II",
+            "avatar": "char_237_gravel/winter_2/avatar.png",
+            "portrait": "char_237_gravel/winter_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_237_gravel/winter_2/spine_front/char_237_gravel_winter_2.skel"
+              },
+              "back": {
+                "skel": "char_237_gravel/winter_2/spine_back/char_237_gravel_winter_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_243_waaifu": {
+        "skins": {
+          "whirlwind#2": {
+            "name": "街道狂花",
+            "group": "0011/飙系列/II",
+            "avatar": "char_243_waaifu/whirlwind_2/avatar.png",
+            "portrait": "char_243_waaifu/whirlwind_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_243_waaifu/whirlwind_2/spine_front/char_243_waaifu_whirlwind_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_245_cello": {
+        "skins": {
+          "sale#12": {
+            "name": "无我唯识",
+            "group": "忒斯特收藏/XIII",
+            "avatar": "char_245_cello/sale_12/avatar.png",
+            "portrait": "char_245_cello/sale_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_245_cello/sale_12/spine_front/char_245_cello_sale_12.skel"
+              },
+              "back": {
+                "skel": "char_245_cello/sale_12/spine_back/char_245_cello_sale_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_248_mgllan": {
+        "skins": {
+          "kitchen#1": {
+            "name": "回味冰霜雪",
+            "group": "罗德厨房",
+            "avatar": "char_248_mgllan/kitchen_1/avatar.png",
+            "portrait": "char_248_mgllan/kitchen_1/avatar.png"
+          }
+        }
+      },
+      "char_249_mlyss": {
+        "skins": {
+          "ambienceSynesthesia#6": {
+            "name": "漫步于黄金之梦",
+            "group": "音律联觉/VI",
+            "avatar": "char_249_mlyss/ambienceSynesthesia_6/avatar.png",
+            "portrait": "char_249_mlyss/ambienceSynesthesia_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_249_mlyss/ambienceSynesthesia_6/spine_front/char_249_mlyss_ambienceSynesthesia_6.skel"
+              },
+              "back": {
+                "skel": "char_249_mlyss/ambienceSynesthesia_6/spine_back/char_249_mlyss_ambienceSynesthesia_6.skel"
+              }
+            }
+          },
+          "boc#8": {
+            "name": "新枝",
+            "group": "斗争血脉/VIII",
+            "avatar": "char_249_mlyss/boc_8/avatar.png",
+            "portrait": "char_249_mlyss/boc_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_249_mlyss/boc_8/spine_front/char_249_mlyss_boc_8.skel"
+              },
+              "back": {
+                "skel": "char_249_mlyss/boc_8/spine_back/char_249_mlyss_boc_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_250_phatom": {
+        "skins": {
+          "sale#4": {
+            "name": "焦点",
+            "group": "忒斯特收藏/V",
+            "avatar": "char_250_phatom/sale_4/avatar.png",
+            "portrait": "char_250_phatom/sale_4/avatar.png"
+          },
+          "ghost#1": {
+            "name": "梦魇之梦",
+            "group": "缠梦古堡",
+            "avatar": "char_250_phatom/ghost_1/avatar.png",
+            "portrait": "char_250_phatom/ghost_1/avatar.png"
+          }
+        }
+      },
+      "char_253_greyy": {
+        "skins": {
+          "epoque#515": {
+            "name": "都会送报员",
+            "group": "时代/LI",
+            "avatar": "char_253_greyy/epoque_515/avatar.png",
+            "portrait": "char_253_greyy/epoque_515/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_253_greyy/epoque_515/spine_front/char_253_greyy_epoque_515.skel"
+              },
+              "back": {
+                "skel": "char_253_greyy/epoque_515/spine_back/char_253_greyy_epoque_515.skel"
+              }
+            }
+          },
+          "epoque#8": {
+            "name": "八音蛋匠人",
+            "group": "时代/VIII",
+            "avatar": "char_253_greyy/epoque_8/avatar.png",
+            "portrait": "char_253_greyy/epoque_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_253_greyy/epoque_8/spine_front/char_253_greyy_epoque_8.skel"
+              },
+              "back": {
+                "skel": "char_253_greyy/epoque_8/spine_back/char_253_greyy_epoque_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_254_vodfox": {
+        "skins": {
+          "witch#2": {
+            "name": "魔城回响",
+            "group": "巫异盛宴/II",
+            "avatar": "char_254_vodfox/witch_2/avatar.png",
+            "portrait": "char_254_vodfox/witch_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_254_vodfox/witch_2/spine_front/char_254_vodfox_witch_2.skel"
+              },
+              "back": {
+                "skel": "char_254_vodfox/witch_2/spine_back/char_254_vodfox_witch_2.skel"
+              }
+            }
+          },
+          "yun#8": {
+            "name": "绣云鹤",
+            "group": "0011/韵系列/VIII",
+            "avatar": "char_254_vodfox/yun_8/avatar.png",
+            "portrait": "char_254_vodfox/yun_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_254_vodfox/yun_8/spine_front/char_254_vodfox_yun_8.skel"
+              },
+              "back": {
+                "skel": "char_254_vodfox/yun_8/spine_back/char_254_vodfox_yun_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_258_podego": {
+        "skins": {
+          "epoque#9": {
+            "name": "小憩初醒",
+            "group": "时代/IX",
+            "avatar": "char_258_podego/epoque_9/avatar.png",
+            "portrait": "char_258_podego/epoque_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_258_podego/epoque_9/spine_front/char_258_podego_epoque_9.skel"
+              },
+              "back": {
+                "skel": "char_258_podego/epoque_9/spine_back/char_258_podego_epoque_9.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_263_skadi": {
+        "skins": {
+          "marthe#5": {
+            "name": "下一顿午茶",
+            "group": "玛尔特/V",
+            "avatar": "char_263_skadi/marthe_5/avatar.png",
+            "portrait": "char_263_skadi/marthe_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_263_skadi/marthe_5/spine_front/char_263_skadi_marthe_5.skel"
+              },
+              "back": {
+                "skel": "char_263_skadi/marthe_5/spine_back/char_263_skadi_marthe_5.skel"
+              }
+            }
+          },
+          "summer#3": {
+            "name": "驭浪 WR04",
+            "group": "珊瑚海岸/III",
+            "avatar": "char_263_skadi/summer_3/avatar.png",
+            "portrait": "char_263_skadi/summer_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_263_skadi/summer_3/spine_front/char_263_skadi_summer_3.skel"
+              },
+              "back": {
+                "skel": "char_263_skadi/summer_3/spine_back/char_263_skadi_summer_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_264_f12yin": {
+        "skins": {
+          "boc#3": {
+            "name": "乌云",
+            "group": "斗争血脉/III",
+            "avatar": "char_264_f12yin/boc_3/avatar.png",
+            "portrait": "char_264_f12yin/boc_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_264_f12yin/boc_3/spine_front/char_264_f12yin_boc_3.skel"
+              },
+              "back": {
+                "skel": "char_264_f12yin/boc_3/spine_back/char_264_f12yin_boc_3.skel"
+              }
+            }
+          },
+          "epoque#15": {
+            "name": "读者",
+            "group": "时代/XV",
+            "avatar": "char_264_f12yin/epoque_15/avatar.png",
+            "portrait": "char_264_f12yin/epoque_15/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_264_f12yin/epoque_15/spine_front/char_264_f12yin_epoque_15.skel"
+              },
+              "back": {
+                "skel": "char_264_f12yin/epoque_15/spine_back/char_264_f12yin_epoque_15.skel"
+              }
+            }
+          },
+          "marthe#13": {
+            "name": "硬派速度",
+            "group": "玛尔特/XIII",
+            "avatar": "char_264_f12yin/marthe_13/avatar.png",
+            "portrait": "char_264_f12yin/marthe_13/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_264_f12yin/marthe_13/spine_front/char_264_f12yin_marthe_13.skel"
+              },
+              "back": {
+                "skel": "char_264_f12yin/marthe_13/spine_back/char_264_f12yin_marthe_13.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_271_spikes": {
+        "skins": {
+          "winter#2": {
+            "name": "随性",
+            "group": "寒武纪/II",
+            "avatar": "char_271_spikes/winter_2/avatar.png",
+            "portrait": "char_271_spikes/winter_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_271_spikes/winter_2/spine_front/char_271_spikes_winter_2.skel"
+              },
+              "back": {
+                "skel": "char_271_spikes/winter_2/spine_back/char_271_spikes_winter_2.skel"
+              }
+            }
+          },
+          "unveiling#1": {
+            "name": "危险邀约",
+            "group": "待予花冠/I",
+            "avatar": "char_271_spikes/unveiling_1/avatar.png",
+            "portrait": "char_271_spikes/unveiling_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_271_spikes/unveiling_1/spine_front/char_271_spikes_unveiling_1.skel"
+              },
+              "back": {
+                "skel": "char_271_spikes/unveiling_1/spine_back/char_271_spikes_unveiling_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_279_excu": {
+        "skins": {
+          "boc#1": {
+            "name": "无题密令",
+            "group": "斗争血脉/I",
+            "avatar": "char_279_excu/boc_1/avatar.png",
+            "portrait": "char_279_excu/boc_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_279_excu/boc_1/spine_front/char_279_excu_boc_1.skel"
+              },
+              "back": {
+                "skel": "char_279_excu/boc_1/spine_back/char_279_excu_boc_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_290_vigna": {
+        "skins": {
+          "as#1": {
+            "name": "漆黑热浪",
+            "group": "音律联觉",
+            "avatar": "char_290_vigna/as_1/avatar.png",
+            "portrait": "char_290_vigna/as_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_290_vigna/as_1/spine_front/char_290_vigna_as_1.skel"
+              },
+              "back": {
+                "skel": "char_290_vigna/as_1/spine_back/char_290_vigna_as_1.skel"
+              }
+            }
+          },
+          "summer#1": {
+            "name": "悠然假日 HD01",
+            "group": "珊瑚海岸/I",
+            "avatar": "char_290_vigna/summer_1/avatar.png",
+            "portrait": "char_290_vigna/summer_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_290_vigna/summer_1/spine_front/char_290_vigna_summer_1.skel"
+              },
+              "back": {
+                "skel": "char_290_vigna/summer_1/spine_back/char_290_vigna_summer_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_291_aglina": {
+        "skins": {
+          "boc#1": {
+            "name": "质素访客",
+            "group": "斗争血脉/I",
+            "avatar": "char_291_aglina/boc_1/avatar.png",
+            "portrait": "char_291_aglina/boc_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_291_aglina/boc_1/spine_front/char_291_aglina_boc_1.skel"
+              }
+            }
+          },
+          "summer#5": {
+            "name": "夏卉 FA017",
+            "group": "珊瑚海岸/V",
+            "avatar": "char_291_aglina/summer_5/avatar.png",
+            "portrait": "char_291_aglina/summer_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_291_aglina/summer_5/spine_front/char_291_aglina_summer_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_293_thorns": {
+        "skins": {
+          "boc#8": {
+            "name": "锋潮",
+            "group": "斗争血脉/VIII",
+            "avatar": "char_293_thorns/boc_8/avatar.png",
+            "portrait": "char_293_thorns/boc_8/avatar.png"
+          },
+          "it#1": {
+            "name": "惬意",
+            "group": "i t",
+            "avatar": "char_293_thorns/it_1/avatar.png",
+            "portrait": "char_293_thorns/it_1/avatar.png"
+          }
+        }
+      },
+      "char_294_ayer": {
+        "skins": {
+          "boc#3": {
+            "name": "受验者",
+            "group": "斗争血脉/III",
+            "avatar": "char_294_ayer/boc_3/avatar.png",
+            "portrait": "char_294_ayer/boc_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_294_ayer/boc_3/spine_front/char_294_ayer_boc_3.skel"
+              },
+              "back": {
+                "skel": "char_294_ayer/boc_3/spine_back/char_294_ayer_boc_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_300_phenxi": {
+        "skins": {
+          "witch#4": {
+            "name": "至圣誓言",
+            "group": "巫异盛宴/IV",
+            "avatar": "char_300_phenxi/witch_4/avatar.png",
+            "portrait": "char_300_phenxi/witch_4/avatar.png"
+          },
+          "boc#9": {
+            "name": "审判日",
+            "group": "斗争血脉/IX",
+            "avatar": "char_300_phenxi/boc_9/avatar.png",
+            "portrait": "char_300_phenxi/boc_9/avatar.png"
+          }
+        }
+      },
+      "char_304_zebra": {
+        "skins": {
+          "wild#6": {
+            "name": "幽苔",
+            "group": "生命之地/VI",
+            "avatar": "char_304_zebra/wild_6/avatar.png",
+            "portrait": "char_304_zebra/wild_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_304_zebra/wild_6/spine_front/char_304_zebra_wild_6.skel"
+              },
+              "back": {
+                "skel": "char_304_zebra/wild_6/spine_back/char_304_zebra_wild_6.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_306_leizi": {
+        "skins": {
+          "game#3": {
+            "name": "遗迹游学者",
+            "group": "成就之星/III",
+            "avatar": "char_306_leizi/game_3/avatar.png",
+            "portrait": "char_306_leizi/game_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_306_leizi/game_3/spine_front/char_306_leizi_game_3.skel"
+              },
+              "back": {
+                "skel": "char_306_leizi/game_3/spine_back/char_306_leizi_game_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_308_swire": {
+        "skins": {
+          "nian#2": {
+            "name": "富贵荣华",
+            "group": "0011制造/II",
+            "avatar": "char_308_swire/nian_2/avatar.png",
+            "portrait": "char_308_swire/nian_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_308_swire/nian_2/spine_front/char_308_swire_nian_2.skel"
+              },
+              "back": {
+                "skel": "char_308_swire/nian_2/spine_back/char_308_swire_nian_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_311_mudrok": {
+        "skins": {
+          "ambienceSynesthesia#2": {
+            "name": "黑曜石",
+            "group": "音律联觉/II",
+            "avatar": "char_311_mudrok/ambienceSynesthesia_2/avatar.png",
+            "portrait": "char_311_mudrok/ambienceSynesthesia_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_311_mudrok/ambienceSynesthesia_2/spine_front/char_311_mudrok_ambienceSynesthesia_2.skel"
+              },
+              "back": {
+                "skel": "char_311_mudrok/ambienceSynesthesia_2/spine_back/char_311_mudrok_ambienceSynesthesia_2.skel"
+              }
+            }
+          },
+          "summer#6": {
+            "name": "静谧午夜 DN06",
+            "group": "珊瑚海岸/VI",
+            "avatar": "char_311_mudrok/summer_6/avatar.png",
+            "portrait": "char_311_mudrok/summer_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_311_mudrok/summer_6/spine_front/char_311_mudrok_summer_6.skel"
+              },
+              "back": {
+                "skel": "char_311_mudrok/summer_6/spine_back/char_311_mudrok_summer_6.skel"
+              }
+            }
+          },
+          "wild#10": {
+            "name": "砾瓦",
+            "group": "生命之地/X",
+            "avatar": "char_311_mudrok/wild_10/avatar.png",
+            "portrait": "char_311_mudrok/wild_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_311_mudrok/wild_10/spine_front/char_311_mudrok_wild_10.skel"
+              },
+              "back": {
+                "skel": "char_311_mudrok/wild_10/spine_back/char_311_mudrok_wild_10.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_322_lmlee": {
+        "skins": {
+          "whirlwind#10": {
+            "name": "鉴浮生",
+            "group": "0011/飙系列/X",
+            "avatar": "char_322_lmlee/whirlwind_10/avatar.png",
+            "portrait": "char_322_lmlee/whirlwind_10/avatar.png"
+          },
+          "witch#3": {
+            "name": "手到牌来",
+            "group": "巫异盛宴/III",
+            "avatar": "char_322_lmlee/witch_3/avatar.png",
+            "portrait": "char_322_lmlee/witch_3/avatar.png"
+          },
+          "sanrio#1": {
+            "name": "坊间凉茶铺",
+            "group": "三丽鸥家族",
+            "avatar": "char_322_lmlee/sanrio_1/avatar.png",
+            "portrait": "char_322_lmlee/sanrio_1/avatar.png"
+          }
+        }
+      },
+      "char_332_archet": {
+        "skins": {
+          "sale#14": {
+            "name": "至虔者荣光",
+            "group": "忒斯特收藏/XV",
+            "avatar": "char_332_archet/sale_14/avatar.png",
+            "portrait": "char_332_archet/sale_14/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_332_archet/sale_14/spine_front/char_332_archet_sale_14.skel"
+              },
+              "back": {
+                "skel": "char_332_archet/sale_14/spine_back/char_332_archet_sale_14.skel"
+              }
+            }
+          },
+          "shining#1": {
+            "name": "宣传策略",
+            "group": "闪耀阶梯",
+            "avatar": "char_332_archet/shining_1/avatar.png",
+            "portrait": "char_332_archet/shining_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_332_archet/shining_1/spine_front/char_332_archet_shining_1.skel"
+              },
+              "back": {
+                "skel": "char_332_archet/shining_1/spine_back/char_332_archet_shining_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_337_utage": {
+        "skins": {
+          "epoque#15": {
+            "name": "伪装",
+            "group": "时代/XV",
+            "avatar": "char_337_utage/epoque_15/avatar.png",
+            "portrait": "char_337_utage/epoque_15/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_337_utage/epoque_15/spine_front/char_337_utage_epoque_15.skel"
+              },
+              "back": {
+                "skel": "char_337_utage/epoque_15/spine_back/char_337_utage_epoque_15.skel"
+              }
+            }
+          },
+          "summer#4": {
+            "name": "夏卉 FA661",
+            "group": "珊瑚海岸/IV",
+            "avatar": "char_337_utage/summer_4/avatar.png",
+            "portrait": "char_337_utage/summer_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_337_utage/summer_4/spine_front/char_337_utage_summer_4.skel"
+              },
+              "back": {
+                "skel": "char_337_utage/summer_4/spine_back/char_337_utage_summer_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_340_shwaz": {
+        "skins": {
+          "snow#1": {
+            "name": "厚礼",
+            "group": "冰原信使/I",
+            "avatar": "char_340_shwaz/snow_1/avatar.png",
+            "portrait": "char_340_shwaz/snow_1/avatar.png"
+          },
+          "striker#1": {
+            "name": "天际线",
+            "group": "雷神推进者",
+            "avatar": "char_340_shwaz/striker_1/avatar.png",
+            "portrait": "char_340_shwaz/striker_1/avatar.png"
+          }
+        }
+      },
+      "char_341_sntlla": {
+        "skins": {
+          "summer#15": {
+            "name": "悠然假日 HD71",
+            "group": "珊瑚海岸/XV",
+            "avatar": "char_341_sntlla/summer_15/avatar.png",
+            "portrait": "char_341_sntlla/summer_15/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_341_sntlla/summer_15/spine_front/char_341_sntlla_summer_15.skel"
+              },
+              "back": {
+                "skel": "char_341_sntlla/summer_15/spine_back/char_341_sntlla_summer_15.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_344_beewax": {
+        "skins": {
+          "epoque#9": {
+            "name": "白沙",
+            "group": "时代/IX",
+            "avatar": "char_344_beewax/epoque_9/avatar.png",
+            "portrait": "char_344_beewax/epoque_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_344_beewax/epoque_9/spine_front/char_344_beewax_epoque_9.skel"
+              },
+              "back": {
+                "skel": "char_344_beewax/epoque_9/spine_back/char_344_beewax_epoque_9.skel"
+              }
+            }
+          },
+          "summer#11": {
+            "name": "悠然假日 HD61",
+            "group": "珊瑚海岸/XI",
+            "avatar": "char_344_beewax/summer_11/avatar.png",
+            "portrait": "char_344_beewax/summer_11/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_344_beewax/summer_11/spine_front/char_344_beewax_summer_11.skel"
+              },
+              "back": {
+                "skel": "char_344_beewax/summer_11/spine_back/char_344_beewax_summer_11.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_345_folnic": {
+        "skins": {
+          "wild#4": {
+            "name": "残葛",
+            "group": "生命之地/IV",
+            "avatar": "char_345_folnic/wild_4/avatar.png",
+            "portrait": "char_345_folnic/wild_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_345_folnic/wild_4/spine_front/char_345_folnic_wild_4.skel"
+              },
+              "back": {
+                "skel": "char_345_folnic/wild_4/spine_back/char_345_folnic_wild_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_348_ceylon": {
+        "skins": {
+          "summer#13": {
+            "name": "悠然假日 HD49",
+            "group": "珊瑚海岸/XIII",
+            "avatar": "char_348_ceylon/summer_13/avatar.png",
+            "portrait": "char_348_ceylon/summer_13/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_348_ceylon/summer_13/spine_front/char_348_ceylon_summer_13.skel"
+              },
+              "back": {
+                "skel": "char_348_ceylon/summer_13/spine_back/char_348_ceylon_summer_13.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_350_surtr": {
+        "skins": {
+          "ambienceSynesthesia#6": {
+            "name": "超然序曲",
+            "group": "音律联觉/VII",
+            "avatar": "char_350_surtr/ambienceSynesthesia_6/avatar.png",
+            "portrait": "char_350_surtr/ambienceSynesthesia_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_350_surtr/ambienceSynesthesia_6/spine_front/char_350_surtr_ambienceSynesthesia_6.skel"
+              },
+              "back": {
+                "skel": "char_350_surtr/ambienceSynesthesia_6/spine_back/char_350_surtr_ambienceSynesthesia_6.skel"
+              }
+            }
+          },
+          "it#1": {
+            "name": "自由//失效",
+            "group": "i t",
+            "avatar": "char_350_surtr/it_1/avatar.png",
+            "portrait": "char_350_surtr/it_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_350_surtr/it_1/spine_front/char_350_surtr_it_1.skel"
+              },
+              "back": {
+                "skel": "char_350_surtr/it_1/spine_back/char_350_surtr_it_1.skel"
+              }
+            }
+          },
+          "summer#9": {
+            "name": "缤纷奇境 CW03",
+            "group": "珊瑚海岸/IX",
+            "avatar": "char_350_surtr/summer_9/avatar.png",
+            "portrait": "char_350_surtr/summer_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_350_surtr/summer_9/spine_front/char_350_surtr_summer_9.skel"
+              },
+              "back": {
+                "skel": "char_350_surtr/summer_9/spine_back/char_350_surtr_summer_9.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_355_ethan": {
+        "skins": {
+          "epoque#7": {
+            "name": "渗透",
+            "group": "时代/VII",
+            "avatar": "char_355_ethan/epoque_7/avatar.png",
+            "portrait": "char_355_ethan/epoque_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_355_ethan/epoque_7/spine_front/char_355_ethan_epoque_7.skel"
+              },
+              "back": {
+                "skel": "char_355_ethan/epoque_7/spine_back/char_355_ethan_epoque_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_358_lisa": {
+        "skins": {
+          "epoque#22": {
+            "name": "雪霁",
+            "group": "时代/XXII",
+            "avatar": "char_358_lisa/epoque_22/avatar.png",
+            "portrait": "char_358_lisa/epoque_22/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_358_lisa/epoque_22/spine_front/char_358_lisa_epoque_22.skel"
+              },
+              "back": {
+                "skel": "char_358_lisa/epoque_22/spine_back/char_358_lisa_epoque_22.skel"
+              }
+            }
+          },
+          "lxh#1": {
+            "name": "春之颂",
+            "group": "罗小黑战记",
+            "avatar": "char_358_lisa/lxh_1/avatar.png",
+            "portrait": "char_358_lisa/lxh_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_358_lisa/lxh_1/spine_front/char_358_lisa_lxh_1.skel"
+              },
+              "back": {
+                "skel": "char_358_lisa/lxh_1/spine_back/char_358_lisa_lxh_1.skel"
+              }
+            }
+          },
+          "wild#3": {
+            "name": "弃土花开",
+            "group": "生命之地/III",
+            "avatar": "char_358_lisa/wild_3/avatar.png",
+            "portrait": "char_358_lisa/wild_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_358_lisa/wild_3/spine_front/char_358_lisa_wild_3.skel"
+              },
+              "back": {
+                "skel": "char_358_lisa/wild_3/spine_back/char_358_lisa_wild_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_362_saga": {
+        "skins": {
+          "sale#9": {
+            "name": "彼有",
+            "group": "忒斯特收藏/X",
+            "avatar": "char_362_saga/sale_9/avatar.png",
+            "portrait": "char_362_saga/sale_9/avatar.png"
+          }
+        }
+      },
+      "char_373_lionhd": {
+        "skins": {
+          "snow#3": {
+            "name": "希望巡游",
+            "group": "冰原信使/III",
+            "avatar": "char_373_lionhd/snow_3/avatar.png",
+            "portrait": "char_373_lionhd/snow_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_373_lionhd/snow_3/spine_front/char_373_lionhd_snow_3.skel"
+              },
+              "back": {
+                "skel": "char_373_lionhd/snow_3/spine_back/char_373_lionhd_snow_3.skel"
+              }
+            }
+          },
+          "wild#3": {
+            "name": "宝藏行家",
+            "group": "生命之地/III",
+            "avatar": "char_373_lionhd/wild_3/avatar.png",
+            "portrait": "char_373_lionhd/wild_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_373_lionhd/wild_3/spine_front/char_373_lionhd_wild_3.skel"
+              },
+              "back": {
+                "skel": "char_373_lionhd/wild_3/spine_back/char_373_lionhd_wild_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_377_gdglow": {
+        "skins": {
+          "summer#12": {
+            "name": "夏卉 FA394",
+            "group": "珊瑚海岸/XII",
+            "avatar": "char_377_gdglow/summer_12/avatar.png",
+            "portrait": "char_377_gdglow/summer_12/avatar.png"
+          },
+          "snow#5": {
+            "name": "喜夜侍者",
+            "group": "冰原信使/V",
+            "avatar": "char_377_gdglow/snow_5/avatar.png",
+            "portrait": "char_377_gdglow/snow_5/avatar.png"
+          },
+          "sanrio#1": {
+            "name": "花房茶话会",
+            "group": "三丽鸥家族",
+            "avatar": "char_377_gdglow/sanrio_1/avatar.png",
+            "portrait": "char_377_gdglow/sanrio_1/avatar.png"
+          }
+        }
+      },
+      "char_381_bubble": {
+        "skins": {
+          "marthe#11": {
+            "name": "迎风之轮",
+            "group": "玛尔特/XI",
+            "avatar": "char_381_bubble/marthe_11/avatar.png",
+            "portrait": "char_381_bubble/marthe_11/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_381_bubble/marthe_11/spine_front/char_381_bubble_marthe_11.skel"
+              },
+              "back": {
+                "skel": "char_381_bubble/marthe_11/spine_back/char_381_bubble_marthe_11.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_388_mint": {
+        "skins": {
+          "epoque#22": {
+            "name": "月宵",
+            "group": "时代/XXII",
+            "avatar": "char_388_mint/epoque_22/avatar.png",
+            "portrait": "char_388_mint/epoque_22/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_388_mint/epoque_22/spine_front/char_388_mint_epoque_22.skel"
+              },
+              "back": {
+                "skel": "char_388_mint/epoque_22/spine_back/char_388_mint_epoque_22.skel"
+              }
+            }
+          },
+          "epoque#30": {
+            "name": "私人书房",
+            "group": "时代/XXX",
+            "avatar": "char_388_mint/epoque_30/avatar.png",
+            "portrait": "char_388_mint/epoque_30/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_388_mint/epoque_30/spine_front/char_388_mint_epoque_30.skel"
+              },
+              "back": {
+                "skel": "char_388_mint/epoque_30/spine_back/char_388_mint_epoque_30.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_391_rosmon": {
+        "skins": {
+          "epoque#17": {
+            "name": "拥抱新生",
+            "group": "时代/XVII",
+            "avatar": "char_391_rosmon/epoque_17/avatar.png",
+            "portrait": "char_391_rosmon/epoque_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_391_rosmon/epoque_17/spine_front/char_391_rosmon_epoque_17.skel"
+              },
+              "back": {
+                "skel": "char_391_rosmon/epoque_17/spine_back/char_391_rosmon_epoque_17.skel"
+              }
+            }
+          },
+          "sale#16": {
+            "name": "轻盈一梦",
+            "group": "忒斯特收藏/XVIII",
+            "avatar": "char_391_rosmon/sale_16/avatar.png",
+            "portrait": "char_391_rosmon/sale_16/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_391_rosmon/sale_16/spine_front/char_391_rosmon_sale_16.skel"
+              },
+              "back": {
+                "skel": "char_391_rosmon/sale_16/spine_back/char_391_rosmon_sale_16.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4004_pudd": {
+        "skins": {
+          "snow#5": {
+            "name": "火树灵",
+            "group": "冰原信使/V",
+            "avatar": "char_4004_pudd/snow_5/avatar.png",
+            "portrait": "char_4004_pudd/snow_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4004_pudd/snow_5/spine_front/char_4004_pudd_snow_5.skel"
+              },
+              "back": {
+                "skel": "char_4004_pudd/snow_5/spine_back/char_4004_pudd_snow_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4009_irene": {
+        "skins": {
+          "ambienceSynesthesia#3": {
+            "name": "飞羽",
+            "group": "音律联觉/III",
+            "avatar": "char_4009_irene/ambienceSynesthesia_3/avatar.png",
+            "portrait": "char_4009_irene/ambienceSynesthesia_3/avatar.png"
+          },
+          "game#3": {
+            "name": "至高判决",
+            "group": "成就之星/III",
+            "avatar": "char_4009_irene/game_3/avatar.png",
+            "portrait": "char_4009_irene/game_3/avatar.png"
+          }
+        }
+      },
+      "char_400_weedy": {
+        "skins": {
+          "snow#2": {
+            "name": "糖果仙子",
+            "group": "冰原信使/II",
+            "avatar": "char_400_weedy/snow_2/avatar.png",
+            "portrait": "char_400_weedy/snow_2/avatar.png"
+          },
+          "sightseer#1": {
+            "name": "倾听",
+            "group": "错位巡礼/I",
+            "avatar": "char_400_weedy/sightseer_1/avatar.png",
+            "portrait": "char_400_weedy/sightseer_1/avatar.png"
+          }
+        }
+      },
+      "char_4010_etlchi": {
+        "skins": {
+          "winter#5": {
+            "name": "耀目之蓝",
+            "group": "寒武纪/V",
+            "avatar": "char_4010_etlchi/winter_5/avatar.png",
+            "portrait": "char_4010_etlchi/winter_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4010_etlchi/winter_5/spine_front/char_4010_etlchi_winter_5.skel"
+              },
+              "back": {
+                "skel": "char_4010_etlchi/winter_5/spine_back/char_4010_etlchi_winter_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4011_lessng": {
+        "skins": {
+          "whirlwind#7": {
+            "name": "幻火",
+            "group": "0011/飙系列/VII",
+            "avatar": "char_4011_lessng/whirlwind_7/avatar.png",
+            "portrait": "char_4011_lessng/whirlwind_7/avatar.png"
+          }
+        }
+      },
+      "char_4013_kjera": {
+        "skins": {
+          "epoque#18": {
+            "name": "灵巧侍者",
+            "group": "时代/XVIII",
+            "avatar": "char_4013_kjera/epoque_18/avatar.png",
+            "portrait": "char_4013_kjera/epoque_18/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4013_kjera/epoque_18/spine_front/char_4013_kjera_epoque_18.skel"
+              },
+              "back": {
+                "skel": "char_4013_kjera/epoque_18/spine_back/char_4013_kjera_epoque_18.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4016_kazema": {
+        "skins": {
+          "witch#3": {
+            "name": "幻影轻悄",
+            "group": "巫异盛宴/III",
+            "avatar": "char_4016_kazema/witch_3/avatar.png",
+            "portrait": "char_4016_kazema/witch_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4016_kazema/witch_3/spine_front/char_4016_kazema_witch_3.skel"
+              },
+              "back": {
+                "skel": "char_4016_kazema/witch_3/spine_back/char_4016_kazema_witch_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4026_vulpis": {
+        "skins": {
+          "epoque#55": {
+            "name": "失焦",
+            "group": "时代/LV",
+            "avatar": "char_4026_vulpis/epoque_55/avatar.png",
+            "portrait": "char_4026_vulpis/epoque_55/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4026_vulpis/epoque_55/spine_front/char_4026_vulpis_epoque_55.skel"
+              },
+              "back": {
+                "skel": "char_4026_vulpis/epoque_55/spine_back/char_4026_vulpis_epoque_55.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4027_heyak": {
+        "skins": {
+          "epoque#50": {
+            "name": "恒久祭礼",
+            "group": "时代/XLIX",
+            "avatar": "char_4027_heyak/epoque_50/avatar.png",
+            "portrait": "char_4027_heyak/epoque_50/avatar.png"
+          },
+          "ambienceSynesthesia#4": {
+            "name": "历世流风",
+            "group": "音律联觉/IV",
+            "avatar": "char_4027_heyak/ambienceSynesthesia_4/avatar.png",
+            "portrait": "char_4027_heyak/ambienceSynesthesia_4/avatar.png"
+          }
+        }
+      },
+      "char_4036_forcer": {
+        "skins": {
+          "epoque#20": {
+            "name": "拾翼",
+            "group": "时代/XXI",
+            "avatar": "char_4036_forcer/epoque_20/avatar.png",
+            "portrait": "char_4036_forcer/epoque_20/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4036_forcer/epoque_20/spine_front/char_4036_forcer_epoque_20.skel"
+              },
+              "back": {
+                "skel": "char_4036_forcer/epoque_20/spine_back/char_4036_forcer_epoque_20.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4039_horn": {
+        "skins": {
+          "epoque#24": {
+            "name": "化花",
+            "group": "时代/XXIV",
+            "avatar": "char_4039_horn/epoque_24/avatar.png",
+            "portrait": "char_4039_horn/epoque_24/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4039_horn/epoque_24/spine_front/char_4039_horn_epoque_24.skel"
+              },
+              "back": {
+                "skel": "char_4039_horn/epoque_24/spine_back/char_4039_horn_epoque_24.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4040_rockr": {
+        "skins": {
+          "lxh#1": {
+            "name": "欢唱之前",
+            "group": "罗小黑战记",
+            "avatar": "char_4040_rockr/lxh_1/avatar.png",
+            "portrait": "char_4040_rockr/lxh_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4040_rockr/lxh_1/spine_front/char_4040_rockr_lxh_1.skel"
+              },
+              "back": {
+                "skel": "char_4040_rockr/lxh_1/spine_back/char_4040_rockr_lxh_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4042_lumen": {
+        "skins": {
+          "ambienceSynesthesia#3": {
+            "name": "灿海浮梦",
+            "group": "音律联觉/III",
+            "avatar": "char_4042_lumen/ambienceSynesthesia_3/avatar.png",
+            "portrait": "char_4042_lumen/ambienceSynesthesia_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4042_lumen/ambienceSynesthesia_3/spine_front/char_4042_lumen_ambienceSynesthesia_3.skel"
+              },
+              "back": {
+                "skel": "char_4042_lumen/ambienceSynesthesia_3/spine_back/char_4042_lumen_ambienceSynesthesia_3.skel"
+              }
+            }
+          },
+          "sanrio#2": {
+            "name": "雨霓行游客",
+            "group": "三丽鸥家族/II",
+            "avatar": "char_4042_lumen/sanrio_2/avatar.png",
+            "portrait": "char_4042_lumen/sanrio_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4042_lumen/sanrio_2/spine_front/char_4042_lumen_sanrio_2.skel"
+              },
+              "back": {
+                "skel": "char_4042_lumen/sanrio_2/spine_back/char_4042_lumen_sanrio_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4045_heidi": {
+        "skins": {
+          "epoque#24": {
+            "name": "书信零落",
+            "group": "时代/XXIV",
+            "avatar": "char_4045_heidi/epoque_24/avatar.png",
+            "portrait": "char_4045_heidi/epoque_24/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4045_heidi/epoque_24/spine_front/char_4045_heidi_epoque_24.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4046_ebnhlz": {
+        "skins": {
+          "boc#6": {
+            "name": "变奏",
+            "group": "斗争血脉/VI",
+            "avatar": "char_4046_ebnhlz/boc_6/avatar.png",
+            "portrait": "char_4046_ebnhlz/boc_6/avatar.png"
+          }
+        }
+      },
+      "char_4048_doroth": {
+        "skins": {
+          "witch#4": {
+            "name": "命运主宰",
+            "group": "巫异盛宴/IV",
+            "avatar": "char_4048_doroth/witch_4/avatar.png",
+            "portrait": "char_4048_doroth/witch_4/avatar.png"
+          }
+        }
+      },
+      "char_4051_akkord": {
+        "skins": {
+          "summer#23": {
+            "name": "悠然假日 HD91",
+            "group": "珊瑚海岸/XXIII",
+            "avatar": "char_4051_akkord/summer_23/avatar.png",
+            "portrait": "char_4051_akkord/summer_23/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4051_akkord/summer_23/spine_front/char_4051_akkord_summer_23.skel"
+              },
+              "back": {
+                "skel": "char_4051_akkord/summer_23/spine_back/char_4051_akkord_summer_23.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4054_malist": {
+        "skins": {
+          "summer#14": {
+            "name": "悠然假日 HDm74",
+            "group": "珊瑚海岸/XIV",
+            "avatar": "char_4054_malist/summer_14/avatar.png",
+            "portrait": "char_4054_malist/summer_14/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4054_malist/summer_14/spine_front/char_4054_malist_summer_14.skel"
+              },
+              "back": {
+                "skel": "char_4054_malist/summer_14/spine_back/char_4054_malist_summer_14.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4055_bgsnow": {
+        "skins": {
+          "wild#7": {
+            "name": "字句中的雪原",
+            "group": "生命之地/VII",
+            "avatar": "char_4055_bgsnow/wild_7/avatar.png",
+            "portrait": "char_4055_bgsnow/wild_7/avatar.png"
+          },
+          "yun#7": {
+            "name": "行梦侧畔",
+            "group": "0011/韵系列/VII",
+            "avatar": "char_4055_bgsnow/yun_7/avatar.png",
+            "portrait": "char_4055_bgsnow/yun_7/avatar.png"
+          }
+        }
+      },
+      "char_4058_pepe": {
+        "skins": {
+          "sightseer#2": {
+            "name": "星移",
+            "group": "错位巡礼/II",
+            "avatar": "char_4058_pepe/sightseer_2/avatar.png",
+            "portrait": "char_4058_pepe/sightseer_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4058_pepe/sightseer_2/spine_front/char_4058_pepe_sightseer_2.skel"
+              },
+              "back": {
+                "skel": "char_4058_pepe/sightseer_2/spine_back/char_4058_pepe_sightseer_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4064_mlynar": {
+        "skins": {
+          "epoque#28": {
+            "name": "远路",
+            "group": "时代/XXVIII",
+            "avatar": "char_4064_mlynar/epoque_28/avatar.png",
+            "portrait": "char_4064_mlynar/epoque_28/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4064_mlynar/epoque_28/spine_front/char_4064_mlynar_epoque_28.skel"
+              },
+              "back": {
+                "skel": "char_4064_mlynar/epoque_28/spine_back/char_4064_mlynar_epoque_28.skel"
+              }
+            }
+          },
+          "iteration#3": {
+            "name": "苍茫怒号",
+            "group": "命途迭代/III",
+            "avatar": "char_4064_mlynar/iteration_3/avatar.png",
+            "portrait": "char_4064_mlynar/iteration_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4064_mlynar/iteration_3/spine_front/char_4064_mlynar_iteration_3.skel"
+              },
+              "back": {
+                "skel": "char_4064_mlynar/iteration_3/spine_back/char_4064_mlynar_iteration_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4065_judge": {
+        "skins": {
+          "epoque#33": {
+            "name": "记叙",
+            "group": "时代/XXXIII",
+            "avatar": "char_4065_judge/epoque_33/avatar.png",
+            "portrait": "char_4065_judge/epoque_33/avatar.png"
+          },
+          "snow#6": {
+            "name": "偶尔醉陶",
+            "group": "冰原信使/VI",
+            "avatar": "char_4065_judge/snow_6/avatar.png",
+            "portrait": "char_4065_judge/snow_6/avatar.png"
+          }
+        }
+      },
+      "char_4072_ironmn": {
+        "skins": {
+          "summer#11": {
+            "name": "沙滩护卫 GT003",
+            "group": "珊瑚海岸/XI",
+            "avatar": "char_4072_ironmn/summer_11/avatar.png",
+            "portrait": "char_4072_ironmn/summer_11/avatar.png"
+          },
+          "ambienceSynesthesia#5": {
+            "name": "空心王冠",
+            "group": "音律联觉/V",
+            "avatar": "char_4072_ironmn/ambienceSynesthesia_5/avatar.png",
+            "portrait": "char_4072_ironmn/ambienceSynesthesia_5/avatar.png"
+          }
+        }
+      },
+      "char_4079_haini": {
+        "skins": {
+          "epoque#45": {
+            "name": "翻涌",
+            "group": "时代/XLIV",
+            "avatar": "char_4079_haini/epoque_45/avatar.png",
+            "portrait": "char_4079_haini/epoque_45/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4079_haini/epoque_45/spine_front/char_4079_haini_epoque_45.skel"
+              },
+              "back": {
+                "skel": "char_4079_haini/epoque_45/spine_back/char_4079_haini_epoque_45.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4080_lin": {
+        "skins": {
+          "nian#10": {
+            "name": "列瑶台",
+            "group": "0011制造/IX",
+            "avatar": "char_4080_lin/nian_10/avatar.png",
+            "portrait": "char_4080_lin/nian_10/avatar.png"
+          },
+          "summer#19": {
+            "name": "夏卉 FA137",
+            "group": "珊瑚海岸/XIX",
+            "avatar": "char_4080_lin/summer_19/avatar.png",
+            "portrait": "char_4080_lin/summer_19/avatar.png"
+          },
+          "littlePony#1": {
+            "name": "求知的魔法",
+            "group": "小马宝莉",
+            "avatar": "char_4080_lin/littlePony_1/avatar.png",
+            "portrait": "char_4080_lin/littlePony_1/avatar.png"
+          }
+        }
+      },
+      "char_4082_qiubai": {
+        "skins": {
+          "epoque#31": {
+            "name": "礼遇",
+            "group": "时代/XXXI",
+            "avatar": "char_4082_qiubai/epoque_31/avatar.png",
+            "portrait": "char_4082_qiubai/epoque_31/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4082_qiubai/epoque_31/spine_front/char_4082_qiubai_epoque_31.skel"
+              },
+              "back": {
+                "skel": "char_4082_qiubai/epoque_31/spine_back/char_4082_qiubai_epoque_31.skel"
+              }
+            }
+          },
+          "ncg#1": {
+            "name": "霜林醉",
+            "group": "国家地理",
+            "avatar": "char_4082_qiubai/ncg_1/avatar.png",
+            "portrait": "char_4082_qiubai/ncg_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4082_qiubai/ncg_1/spine_front/char_4082_qiubai_ncg_1.skel"
+              },
+              "back": {
+                "skel": "char_4082_qiubai/ncg_1/spine_back/char_4082_qiubai_ncg_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4087_ines": {
+        "skins": {
+          "ambienceSynesthesia#5": {
+            "name": "蝶舞华章",
+            "group": "音律联觉/V",
+            "avatar": "char_4087_ines/ambienceSynesthesia_5/avatar.png",
+            "portrait": "char_4087_ines/ambienceSynesthesia_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4087_ines/ambienceSynesthesia_5/spine_front/char_4087_ines_ambienceSynesthesia_5.skel"
+              },
+              "back": {
+                "skel": "char_4087_ines/ambienceSynesthesia_5/spine_back/char_4087_ines_ambienceSynesthesia_5.skel"
+              }
+            }
+          },
+          "boc#8": {
+            "name": "燃烧天穹下",
+            "group": "斗争血脉/VIII",
+            "avatar": "char_4087_ines/boc_8/avatar.png",
+            "portrait": "char_4087_ines/boc_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4087_ines/boc_8/spine_front/char_4087_ines_boc_8.skel"
+              },
+              "back": {
+                "skel": "char_4087_ines/boc_8/spine_back/char_4087_ines_boc_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4088_hodrer": {
+        "skins": {
+          "sightseer#1": {
+            "name": "沉思之庭",
+            "group": "错位巡礼/I",
+            "avatar": "char_4088_hodrer/sightseer_1/avatar.png",
+            "portrait": "char_4088_hodrer/sightseer_1/avatar.png"
+          }
+        }
+      },
+      "char_4098_vvana": {
+        "skins": {
+          "epoque#40": {
+            "name": "寄自奥格尼斯科",
+            "group": "时代/XXXIX",
+            "avatar": "char_4098_vvana/epoque_40/avatar.png",
+            "portrait": "char_4098_vvana/epoque_40/avatar.png"
+          }
+        }
+      },
+      "char_4100_caper": {
+        "skins": {
+          "summer#18": {
+            "name": "夏卉 FA083",
+            "group": "珊瑚海岸/XVIII",
+            "avatar": "char_4100_caper/summer_18/avatar.png",
+            "portrait": "char_4100_caper/summer_18/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4100_caper/summer_18/spine_front/char_4100_caper_summer_18.skel"
+              },
+              "back": {
+                "skel": "char_4100_caper/summer_18/spine_back/char_4100_caper_summer_18.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4114_harold": {
+        "skins": {
+          "snow#7": {
+            "name": "邀雪",
+            "group": "冰原信使/VII",
+            "avatar": "char_4114_harold/snow_7/avatar.png",
+            "portrait": "char_4114_harold/snow_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4114_harold/snow_7/spine_front/char_4114_harold_snow_7.skel"
+              },
+              "back": {
+                "skel": "char_4114_harold/snow_7/spine_back/char_4114_harold_snow_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4116_blkkgt": {
+        "skins": {
+          "witch#5": {
+            "name": "暗月的影子",
+            "group": "巫异盛宴/V",
+            "avatar": "char_4116_blkkgt/witch_5/avatar.png",
+            "portrait": "char_4116_blkkgt/witch_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4116_blkkgt/witch_5/spine_front/char_4116_blkkgt_witch_5.skel"
+              },
+              "back": {
+                "skel": "char_4116_blkkgt/witch_5/spine_back/char_4116_blkkgt_witch_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4117_ray": {
+        "skins": {
+          "summer#22": {
+            "name": "夏卉 FA098",
+            "group": "珊瑚海岸/XXII",
+            "avatar": "char_4117_ray/summer_22/avatar.png",
+            "portrait": "char_4117_ray/summer_22/avatar.png"
+          },
+          "shining#2": {
+            "name": "梦幻高空",
+            "group": "闪耀阶梯/II",
+            "avatar": "char_4117_ray/shining_2/avatar.png",
+            "portrait": "char_4117_ray/shining_2/avatar.png"
+          }
+        }
+      },
+      "char_4119_wanqin": {
+        "skins": {
+          "epoque#41": {
+            "name": "万顷阳光",
+            "group": "时代/XL",
+            "avatar": "char_4119_wanqin/epoque_41/avatar.png",
+            "portrait": "char_4119_wanqin/epoque_41/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4119_wanqin/epoque_41/spine_front/char_4119_wanqin_epoque_41.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4121_zuole": {
+        "skins": {
+          "sale#16": {
+            "name": "无息破局",
+            "group": "忒斯特收藏/XVIII",
+            "avatar": "char_4121_zuole/sale_16/avatar.png",
+            "portrait": "char_4121_zuole/sale_16/avatar.png"
+          },
+          "nian#11": {
+            "name": "少年游",
+            "group": "0011制造/XI",
+            "avatar": "char_4121_zuole/nian_11/avatar.png",
+            "portrait": "char_4121_zuole/nian_11/avatar.png"
+          }
+        }
+      },
+      "char_4122_grabds": {
+        "skins": {
+          "yun#3": {
+            "name": "步芳兰",
+            "group": "0011/韵系列/III",
+            "avatar": "char_4122_grabds/yun_3/avatar.png",
+            "portrait": "char_4122_grabds/yun_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4122_grabds/yun_3/spine_front/char_4122_grabds_yun_3.skel"
+              },
+              "back": {
+                "skel": "char_4122_grabds/yun_3/spine_back/char_4122_grabds_yun_3.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4132_ascln": {
+        "skins": {
+          "iteration#4": {
+            "name": "趋光之暗",
+            "group": "命途迭代/IV",
+            "avatar": "char_4132_ascln/iteration_4/avatar.png",
+            "portrait": "char_4132_ascln/iteration_4/avatar.png"
+          }
+        }
+      },
+      "char_4133_logos": {
+        "skins": {
+          "ambienceSynesthesia#6": {
+            "name": "辉煌的静谧",
+            "group": "音律联觉/VI",
+            "avatar": "char_4133_logos/ambienceSynesthesia_6/avatar.png",
+            "portrait": "char_4133_logos/ambienceSynesthesia_6/avatar.png"
+          }
+        }
+      },
+      "char_4134_cetsyr": {
+        "skins": {
+          "epoque#50": {
+            "name": "追悼",
+            "group": "时代/XLIX",
+            "avatar": "char_4134_cetsyr/epoque_50/avatar.png",
+            "portrait": "char_4134_cetsyr/epoque_50/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4134_cetsyr/epoque_50/spine_front/char_4134_cetsyr_epoque_50.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4137_udflow": {
+        "skins": {
+          "epoque#46": {
+            "name": "层流",
+            "group": "时代/XLV",
+            "avatar": "char_4137_udflow/epoque_46/avatar.png",
+            "portrait": "char_4137_udflow/epoque_46/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4137_udflow/epoque_46/spine_front/char_4137_udflow_epoque_46.skel"
+              },
+              "back": {
+                "skel": "char_4137_udflow/epoque_46/spine_back/char_4137_udflow_epoque_46.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4138_narant": {
+        "skins": {
+          "breaker#1": {
+            "name": "链锯陪护者",
+            "group": "破格视界",
+            "avatar": "char_4138_narant/breaker_1/avatar.png",
+            "portrait": "char_4138_narant/breaker_1/avatar.png"
+          },
+          "littlePony#1": {
+            "name": "率直诚实之人",
+            "group": "小马宝莉",
+            "avatar": "char_4138_narant/littlePony_1/avatar.png",
+            "portrait": "char_4138_narant/littlePony_1/avatar.png"
+          }
+        }
+      },
+      "char_4139_papyrs": {
+        "skins": {
+          "game#8": {
+            "name": "下一个任务",
+            "group": "成就之星/VIII",
+            "avatar": "char_4139_papyrs/game_8/avatar.png",
+            "portrait": "char_4139_papyrs/game_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4139_papyrs/game_8/spine_front/char_4139_papyrs_game_8.skel"
+              },
+              "back": {
+                "skel": "char_4139_papyrs/game_8/spine_back/char_4139_papyrs_game_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4145_ulpia": {
+        "skins": {
+          "epoque#48": {
+            "name": "注目深渊",
+            "group": "时代/XLVII",
+            "avatar": "char_4145_ulpia/epoque_48/avatar.png",
+            "portrait": "char_4145_ulpia/epoque_48/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4145_ulpia/epoque_48/spine_front/char_4145_ulpia_epoque_48.skel"
+              },
+              "back": {
+                "skel": "char_4145_ulpia/epoque_48/spine_back/char_4145_ulpia_epoque_48.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4146_nymph": {
+        "skins": {
+          "ambienceSynesthesia#6": {
+            "name": "繁花梦幻谈",
+            "group": "音律联觉/VII",
+            "avatar": "char_4146_nymph/ambienceSynesthesia_6/avatar.png",
+            "portrait": "char_4146_nymph/ambienceSynesthesia_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4146_nymph/ambienceSynesthesia_6/spine_front/char_4146_nymph_ambienceSynesthesia_6.skel"
+              },
+              "back": {
+                "skel": "char_4146_nymph/ambienceSynesthesia_6/spine_back/char_4146_nymph_ambienceSynesthesia_6.skel"
+              }
+            }
+          },
+          "epoque#42": {
+            "name": "甜美配方",
+            "group": "时代/XLI",
+            "avatar": "char_4146_nymph/epoque_42/avatar.png",
+            "portrait": "char_4146_nymph/epoque_42/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4146_nymph/epoque_42/spine_front/char_4146_nymph_epoque_42.skel"
+              },
+              "back": {
+                "skel": "char_4146_nymph/epoque_42/spine_back/char_4146_nymph_epoque_42.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4148_philae": {
+        "skins": {
+          "nian#12": {
+            "name": "花绸曲",
+            "group": "0011制造/XII",
+            "avatar": "char_4148_philae/nian_12/avatar.png",
+            "portrait": "char_4148_philae/nian_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4148_philae/nian_12/spine_front/char_4148_philae_nian_12.skel"
+              },
+              "back": {
+                "skel": "char_4148_philae/nian_12/spine_back/char_4148_philae_nian_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4151_tinman": {
+        "skins": {
+          "sale#11": {
+            "name": "相位面容",
+            "group": "忒斯特收藏/XII",
+            "avatar": "char_4151_tinman/sale_11/avatar.png",
+            "portrait": "char_4151_tinman/sale_11/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4151_tinman/sale_11/spine_front/char_4151_tinman_sale_11.skel"
+              },
+              "back": {
+                "skel": "char_4151_tinman/sale_11/spine_back/char_4151_tinman_sale_11.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4163_rosesa": {
+        "skins": {
+          "game#7": {
+            "name": "冒险启程",
+            "group": "成就之星/VII",
+            "avatar": "char_4163_rosesa/game_7/avatar.png",
+            "portrait": "char_4163_rosesa/game_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4163_rosesa/game_7/spine_front/char_4163_rosesa_game_7.skel"
+              },
+              "back": {
+                "skel": "char_4163_rosesa/game_7/spine_back/char_4163_rosesa_game_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_416_zumama": {
+        "skins": {
+          "boc#3": {
+            "name": "熔锻铸匠",
+            "group": "斗争血脉/III",
+            "avatar": "char_416_zumama/boc_3/avatar.png",
+            "portrait": "char_416_zumama/boc_3/avatar.png"
+          }
+        }
+      },
+      "char_4179_monstr": {
+        "skins": {
+          "boc#11": {
+            "name": "锋锐",
+            "group": "斗争血脉/XI",
+            "avatar": "char_4179_monstr/boc_11/avatar.png",
+            "portrait": "char_4179_monstr/boc_11/avatar.png"
+          }
+        }
+      },
+      "char_4191_tippi": {
+        "skins": {
+          "epoque#57": {
+            "name": "清新布景",
+            "group": "时代/LVII",
+            "avatar": "char_4191_tippi/epoque_57/avatar.png",
+            "portrait": "char_4191_tippi/epoque_57/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4191_tippi/epoque_57/spine_front/char_4191_tippi_epoque_57.skel"
+              },
+              "back": {
+                "skel": "char_4191_tippi/epoque_57/spine_back/char_4191_tippi_epoque_57.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4193_lemuen": {
+        "skins": {
+          "ambienceSynesthesia#7": {
+            "name": "暮星安魂曲",
+            "group": "音律联觉/VIII",
+            "avatar": "char_4193_lemuen/ambienceSynesthesia_7/avatar.png",
+            "portrait": "char_4193_lemuen/ambienceSynesthesia_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4193_lemuen/ambienceSynesthesia_7/spine_front/char_4193_lemuen_ambienceSynesthesia_7.skel"
+              },
+              "back": {
+                "skel": "char_4193_lemuen/ambienceSynesthesia_7/spine_back/char_4193_lemuen_ambienceSynesthesia_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4194_rmixer": {
+        "skins": {
+          "boc#12": {
+            "name": "天穹肇始",
+            "group": "斗争血脉/XII",
+            "avatar": "char_4194_rmixer/boc_12/avatar.png",
+            "portrait": "char_4194_rmixer/boc_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4194_rmixer/boc_12/spine_front/char_4194_rmixer_boc_12.skel"
+              },
+              "back": {
+                "skel": "char_4194_rmixer/boc_12/spine_back/char_4194_rmixer_boc_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4195_radian": {
+        "skins": {
+          "game#8": {
+            "name": "乱数法则",
+            "group": "成就之星/VIII",
+            "avatar": "char_4195_radian/game_8/avatar.png",
+            "portrait": "char_4195_radian/game_8/avatar.png"
+          }
+        }
+      },
+      "char_4196_reckpr": {
+        "skins": {
+          "yun#12": {
+            "name": "照寰瀛",
+            "group": "0011/韵系列/XII",
+            "avatar": "char_4196_reckpr/yun_12/avatar.png",
+            "portrait": "char_4196_reckpr/yun_12/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4196_reckpr/yun_12/spine_front/char_4196_reckpr_yun_12.skel"
+              },
+              "back": {
+                "skel": "char_4196_reckpr/yun_12/spine_back/char_4196_reckpr_yun_12.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4202_haruka": {
+        "skins": {
+          "iteration#6": {
+            "name": "常世之幻",
+            "group": "命途迭代/VI",
+            "avatar": "char_4202_haruka/iteration_6/avatar.png",
+            "portrait": "char_4202_haruka/iteration_6/avatar.png"
+          }
+        }
+      },
+      "char_4204_mantra": {
+        "skins": {
+          "sightseer#4": {
+            "name": "万籁俱寂",
+            "group": "错位巡礼/IV",
+            "avatar": "char_4204_mantra/sightseer_4/avatar.png",
+            "portrait": "char_4204_mantra/sightseer_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4204_mantra/sightseer_4/spine_front/char_4204_mantra_sightseer_4.skel"
+              },
+              "back": {
+                "skel": "char_4204_mantra/sightseer_4/spine_back/char_4204_mantra_sightseer_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_4207_branch": {
+        "skins": {
+          "yun#10": {
+            "name": "撷香霭",
+            "group": "0011/韵系列/X",
+            "avatar": "char_4207_branch/yun_10/avatar.png",
+            "portrait": "char_4207_branch/yun_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_4207_branch/yun_10/spine_front/char_4207_branch_yun_10.skel"
+              },
+              "back": {
+                "skel": "char_4207_branch/yun_10/spine_back/char_4207_branch_yun_10.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_420_flamtl": {
+        "skins": {
+          "game#2": {
+            "name": "小健将",
+            "group": "成就之星/II",
+            "avatar": "char_420_flamtl/game_2/avatar.png",
+            "portrait": "char_420_flamtl/game_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_420_flamtl/game_2/spine_front/char_420_flamtl_game_2.skel"
+              },
+              "back": {
+                "skel": "char_420_flamtl/game_2/spine_back/char_420_flamtl_game_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_422_aurora": {
+        "skins": {
+          "boc#4": {
+            "name": "极昼捕手",
+            "group": "斗争血脉/IV",
+            "avatar": "char_422_aurora/boc_4/avatar.png",
+            "portrait": "char_422_aurora/boc_4/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_422_aurora/boc_4/spine_front/char_422_aurora_boc_4.skel"
+              },
+              "back": {
+                "skel": "char_422_aurora/boc_4/spine_back/char_422_aurora_boc_4.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_423_blemsh": {
+        "skins": {
+          "littlePony#1": {
+            "name": "善良坚强之心",
+            "group": "小马宝莉",
+            "avatar": "char_423_blemsh/littlePony_1/avatar.png",
+            "portrait": "char_423_blemsh/littlePony_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_423_blemsh/littlePony_1/spine_front/char_423_blemsh_littlePony_1.skel"
+              },
+              "back": {
+                "skel": "char_423_blemsh/littlePony_1/spine_back/char_423_blemsh_littlePony_1.skel"
+              }
+            }
+          },
+          "witch#2": {
+            "name": "异月灾裔",
+            "group": "巫异盛宴/II",
+            "avatar": "char_423_blemsh/witch_2/avatar.png",
+            "portrait": "char_423_blemsh/witch_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_423_blemsh/witch_2/spine_front/char_423_blemsh_witch_2.skel"
+              },
+              "back": {
+                "skel": "char_423_blemsh/witch_2/spine_back/char_423_blemsh_witch_2.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_426_billro": {
+        "skins": {
+          "snow#3": {
+            "name": "霍恩洛厄的寒沙",
+            "group": "冰原信使/III",
+            "avatar": "char_426_billro/snow_3/avatar.png",
+            "portrait": "char_426_billro/snow_3/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_426_billro/snow_3/spine_front/char_426_billro_snow_3.skel"
+              },
+              "back": {
+                "skel": "char_426_billro/snow_3/spine_back/char_426_billro_snow_3.skel"
+              }
+            }
+          },
+          "summer#8": {
+            "name": "灿阳朝露 SD08",
+            "group": "珊瑚海岸/VIII",
+            "avatar": "char_426_billro/summer_8/avatar.png",
+            "portrait": "char_426_billro/summer_8/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_426_billro/summer_8/spine_front/char_426_billro_summer_8.skel"
+              },
+              "back": {
+                "skel": "char_426_billro/summer_8/spine_back/char_426_billro_summer_8.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_427_vigil": {
+        "skins": {
+          "epoque#27": {
+            "name": "叙拉古的彼面",
+            "group": "时代/XXVII",
+            "avatar": "char_427_vigil/epoque_27/avatar.png",
+            "portrait": "char_427_vigil/epoque_27/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_427_vigil/epoque_27/spine_front/char_427_vigil_epoque_27.skel"
+              },
+              "back": {
+                "skel": "char_427_vigil/epoque_27/spine_back/char_427_vigil_epoque_27.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_430_fartth": {
+        "skins": {
+          "whirlwind#5": {
+            "name": "捉风",
+            "group": "0011/飙系列/Ⅴ",
+            "avatar": "char_430_fartth/whirlwind_5/avatar.png",
+            "portrait": "char_430_fartth/whirlwind_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_430_fartth/whirlwind_5/spine_front/char_430_fartth_whirlwind_5.skel"
+              },
+              "back": {
+                "skel": "char_430_fartth/whirlwind_5/spine_back/char_430_fartth_whirlwind_5.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_431_ashlok": {
+        "skins": {
+          "epoque#28": {
+            "name": "卡利斯卡群枪",
+            "group": "时代/XXVIII",
+            "avatar": "char_431_ashlok/epoque_28/avatar.png",
+            "portrait": "char_431_ashlok/epoque_28/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_431_ashlok/epoque_28/spine_front/char_431_ashlok_epoque_28.skel"
+              },
+              "back": {
+                "skel": "char_431_ashlok/epoque_28/spine_back/char_431_ashlok_epoque_28.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_437_mizuki": {
+        "skins": {
+          "game#6": {
+            "name": "永恒玩家",
+            "group": "成就之星/VI",
+            "avatar": "char_437_mizuki/game_6/avatar.png",
+            "portrait": "char_437_mizuki/game_6/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_437_mizuki/game_6/spine_front/char_437_mizuki_game_6.skel"
+              },
+              "back": {
+                "skel": "char_437_mizuki/game_6/spine_back/char_437_mizuki_game_6.skel"
+              }
+            }
+          },
+          "sale#7": {
+            "name": "夏日餮宴",
+            "group": "忒斯特收藏/VIII",
+            "avatar": "char_437_mizuki/sale_7/avatar.png",
+            "portrait": "char_437_mizuki/sale_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_437_mizuki/sale_7/spine_front/char_437_mizuki_sale_7.skel"
+              },
+              "back": {
+                "skel": "char_437_mizuki/sale_7/spine_back/char_437_mizuki_sale_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_440_pinecn": {
+        "skins": {
+          "epoque#31": {
+            "name": "远行的季节",
+            "group": "时代/XXXI",
+            "avatar": "char_440_pinecn/epoque_31/avatar.png",
+            "portrait": "char_440_pinecn/epoque_31/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_440_pinecn/epoque_31/spine_front/char_440_pinecn_epoque_31.skel"
+              },
+              "back": {
+                "skel": "char_440_pinecn/epoque_31/spine_back/char_440_pinecn_epoque_31.skel"
+              }
+            }
+          },
+          "shining#1": {
+            "name": "倾声歌唱",
+            "group": "闪耀阶梯",
+            "avatar": "char_440_pinecn/shining_1/avatar.png",
+            "portrait": "char_440_pinecn/shining_1/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_440_pinecn/shining_1/spine_front/char_440_pinecn_shining_1.skel"
+              },
+              "back": {
+                "skel": "char_440_pinecn/shining_1/spine_back/char_440_pinecn_shining_1.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_446_aroma": {
+        "skins": {
+          "epoque#54": {
+            "name": "舒心野趣",
+            "group": "时代/LIV",
+            "avatar": "char_446_aroma/epoque_54/avatar.png",
+            "portrait": "char_446_aroma/epoque_54/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_446_aroma/epoque_54/spine_front/char_446_aroma_epoque_54.skel"
+              },
+              "back": {
+                "skel": "char_446_aroma/epoque_54/spine_back/char_446_aroma_epoque_54.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_449_glider": {
+        "skins": {
+          "epoque#17": {
+            "name": "荒野之后",
+            "group": "时代/XVII",
+            "avatar": "char_449_glider/epoque_17/avatar.png",
+            "portrait": "char_449_glider/epoque_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_449_glider/epoque_17/spine_front/char_449_glider_epoque_17.skel"
+              },
+              "back": {
+                "skel": "char_449_glider/epoque_17/spine_back/char_449_glider_epoque_17.skel"
+              }
+            }
+          },
+          "nian#10": {
+            "name": "洇灵雨",
+            "group": "0011制造/IX",
+            "avatar": "char_449_glider/nian_10/avatar.png",
+            "portrait": "char_449_glider/nian_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_449_glider/nian_10/spine_front/char_449_glider_nian_10.skel"
+              },
+              "back": {
+                "skel": "char_449_glider/nian_10/spine_back/char_449_glider_nian_10.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_450_necras": {
+        "skins": {
+          "summer#20": {
+            "name": "夏卉 FA161",
+            "group": "珊瑚海岸/XX",
+            "avatar": "char_450_necras/summer_20/avatar.png",
+            "portrait": "char_450_necras/summer_20/avatar.png"
+          },
+          "ambienceSynesthesia#7": {
+            "name": "晶化信念",
+            "group": "音律联觉/VIII",
+            "avatar": "char_450_necras/ambienceSynesthesia_7/avatar.png",
+            "portrait": "char_450_necras/ambienceSynesthesia_7/avatar.png"
+          }
+        }
+      },
+      "char_469_indigo": {
+        "skins": {
+          "nian#7": {
+            "name": "待晴日",
+            "group": "0011制造/VI",
+            "avatar": "char_469_indigo/nian_7/avatar.png",
+            "portrait": "char_469_indigo/nian_7/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_469_indigo/nian_7/spine_front/char_469_indigo_nian_7.skel"
+              },
+              "back": {
+                "skel": "char_469_indigo/nian_7/spine_back/char_469_indigo_nian_7.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_472_pasngr": {
+        "skins": {
+          "epoque#17": {
+            "name": "今昔须臾之梦",
+            "group": "时代/XVII",
+            "avatar": "char_472_pasngr/epoque_17/avatar.png",
+            "portrait": "char_472_pasngr/epoque_17/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_472_pasngr/epoque_17/spine_front/char_472_pasngr_epoque_17.skel"
+              },
+              "back": {
+                "skel": "char_472_pasngr/epoque_17/spine_back/char_472_pasngr_epoque_17.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_473_mberry": {
+        "skins": {
+          "epoque#14": {
+            "name": "植药",
+            "group": "时代/XIV",
+            "avatar": "char_473_mberry/epoque_14/avatar.png",
+            "portrait": "char_473_mberry/epoque_14/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_473_mberry/epoque_14/spine_front/char_473_mberry_epoque_14.skel"
+              },
+              "back": {
+                "skel": "char_473_mberry/epoque_14/spine_back/char_473_mberry_epoque_14.skel"
+              }
+            }
+          },
+          "nian#9": {
+            "name": "照冰轮",
+            "group": "0011制造/VIII",
+            "avatar": "char_473_mberry/nian_9/avatar.png",
+            "portrait": "char_473_mberry/nian_9/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_473_mberry/nian_9/spine_front/char_473_mberry_nian_9.skel"
+              },
+              "back": {
+                "skel": "char_473_mberry/nian_9/spine_back/char_473_mberry_nian_9.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_474_glady": {
+        "skins": {
+          "boc#5": {
+            "name": "返航",
+            "group": "斗争血脉/V",
+            "avatar": "char_474_glady/boc_5/avatar.png",
+            "portrait": "char_474_glady/boc_5/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_474_glady/boc_5/spine_front/char_474_glady_boc_5.skel"
+              },
+              "back": {
+                "skel": "char_474_glady/boc_5/spine_back/char_474_glady_boc_5.skel"
+              }
+            }
+          },
+          "epoque#33": {
+            "name": "我即潮汐",
+            "group": "时代/XXXIII",
+            "avatar": "char_474_glady/epoque_33/avatar.png",
+            "portrait": "char_474_glady/epoque_33/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_474_glady/epoque_33/spine_front/char_474_glady_epoque_33.skel"
+              },
+              "back": {
+                "skel": "char_474_glady/epoque_33/spine_back/char_474_glady_epoque_33.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_479_sleach": {
+        "skins": {
+          "epoque#14": {
+            "name": "识芳",
+            "group": "时代/XIV",
+            "avatar": "char_479_sleach/epoque_14/avatar.png",
+            "portrait": "char_479_sleach/epoque_14/avatar.png"
+          },
+          "summer#11": {
+            "name": "夏卉 FA317",
+            "group": "珊瑚海岸/XI",
+            "avatar": "char_479_sleach/summer_11/avatar.png",
+            "portrait": "char_479_sleach/summer_11/avatar.png"
+          }
+        }
+      },
+      "char_485_pallas": {
+        "skins": {
+          "epoque#12": {
+            "name": "传承",
+            "group": "时代/XII",
+            "avatar": "char_485_pallas/epoque_12/avatar.png",
+            "portrait": "char_485_pallas/epoque_12/avatar.png"
+          },
+          "epoque#19": {
+            "name": "山川的酿造",
+            "group": "时代/XIX",
+            "avatar": "char_485_pallas/epoque_19/avatar.png",
+            "portrait": "char_485_pallas/epoque_19/avatar.png"
+          }
+        }
+      },
+      "char_491_humus": {
+        "skins": {
+          "marthe#10": {
+            "name": "烈阳街景",
+            "group": "玛尔特/X",
+            "avatar": "char_491_humus/marthe_10/avatar.png",
+            "portrait": "char_491_humus/marthe_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_491_humus/marthe_10/spine_front/char_491_humus_marthe_10.skel"
+              },
+              "back": {
+                "skel": "char_491_humus/marthe_10/spine_back/char_491_humus_marthe_10.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_494_vendla": {
+        "skins": {
+          "game#10": {
+            "name": "蔷薇之谜",
+            "group": "成就之星/X",
+            "avatar": "char_494_vendla/game_10/avatar.png",
+            "portrait": "char_494_vendla/game_10/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_494_vendla/game_10/spine_front/char_494_vendla_game_10.skel"
+              },
+              "back": {
+                "skel": "char_494_vendla/game_10/spine_back/char_494_vendla_game_10.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_496_wildmn": {
+        "skins": {
+          "epoque#16": {
+            "name": "正义缔造者",
+            "group": "时代/XVI",
+            "avatar": "char_496_wildmn/epoque_16/avatar.png",
+            "portrait": "char_496_wildmn/epoque_16/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_496_wildmn/epoque_16/spine_front/char_496_wildmn_epoque_16.skel"
+              },
+              "back": {
+                "skel": "char_496_wildmn/epoque_16/spine_back/char_496_wildmn_epoque_16.skel"
+              }
+            }
+          }
+        }
+      },
+      "char_498_inside": {
+        "skins": {
+          "kitchen#2": {
+            "name": "甜品大奖",
+            "group": "罗德厨房/II",
+            "avatar": "char_498_inside/kitchen_2/avatar.png",
+            "portrait": "char_498_inside/kitchen_2/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_498_inside/kitchen_2/spine_front/char_498_inside_kitchen_2.skel"
+              },
+              "back": {
+                "skel": "char_498_inside/kitchen_2/spine_back/char_498_inside_kitchen_2.skel"
+              }
+            }
+          },
+          "summer#22": {
+            "name": "悠然假日 HDm25",
+            "group": "珊瑚海岸/XXII",
+            "avatar": "char_498_inside/summer_22/avatar.png",
+            "portrait": "char_498_inside/summer_22/avatar.png",
+            "spine": {
+              "front": {
+                "skel": "char_498_inside/summer_22/spine_front/char_498_inside_summer_22.skel"
+              },
+              "back": {
+                "skel": "char_498_inside/summer_22/spine_back/char_498_inside_summer_22.skel"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
