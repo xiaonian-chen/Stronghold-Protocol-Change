@@ -1,3 +1,4 @@
 [submodule "Stronghold-Protocol"]
 	path = Stronghold-Protocol
-	url = ./Stronghold-Protocol
+	url = https://github.com/xiaonian-chen/Stronghold-Protocol-Change.git
+	branch = core

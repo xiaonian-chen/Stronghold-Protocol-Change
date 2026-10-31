@@ -382,7 +382,7 @@
 
 ```
 Stronghold-Protocol-v0.3.3/
-├── Stronghold-Protocol/     # 上游核心（Git 子模块，追踪上游 v0.3.3）
+├── Stronghold-Protocol/     # 游戏本体（Git 子模块，追踪本仓库 core 分支，含上游 v0.3.3 + 核心层改动）
 │   └── plugins/             # 插件工作台插件
 │       ├── plugin-chat/     # 局内聊天
 │       ├── plugin-roomlist/ # 大厅房间列表

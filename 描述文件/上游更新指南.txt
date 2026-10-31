@@ -2,7 +2,9 @@
   上游更新指南 — Git 版（五层完整流程）
   最后更新：2026-10-31（新增「版本主机钩子继承」检查点：
                          第一层冲突清单含 server/match/host/index.js，
-                         1.5 符号依赖表登记 fork/execArgv）
+                         1.5 符号依赖表登记 fork/execArgv；
+                         新增「单仓库双分支发布结构」：main/text/core 三分支，
+                         .gitmodules 指向本仓库 core 分支，子模块快照已推送）
 ===========================================================
 
 描述文件协作关系（四文件分工）：
@@ -852,6 +854,61 @@
 
 ===========================================================
   近期变更记录（2026-10-31）
+
+17. 单仓库双分支发布结构（方案 A）（2026-10-31）
+    背景：子模块 Stronghold-Protocol/ 历史上一直以「上游 commit + 未提交脏工作树」
+          的形式存在于本机；v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta /
+          v1.3.3-beta（旧）所有 tag 的 gitlink 都指向本机私有 commit（从未推送），
+          .gitmodules 的 url 又是相对路径 ./Stronghold-Protocol
+          → 从 GitHub 下载的测试版/稳定版解压后子模块目录为空，
+            缺全部游戏本体 + 核心层改动（含 [25] 版本主机钩子继承），双击必失败
+
+    约束：GitHub 仓库的 ZIP 下载永远不含子模块内容，
+          换任何仓库结构都改变不了这一点（必须靠 Releases 挂完整 zip 才能双击即玩）
+
+    方案（一个仓库 URL，三个分支）：
+      仓库：https://github.com/xiaonian-chen/Stronghold-Protocol-Change.git
+        main  稳定版 —— 项目根目录（mods/、mod-framework/、描述文件/、node/、启动脚本）
+        text  测试版 —— 同结构，功能领先 main
+        core  游戏本体快照 —— Stronghold-Protocol/ 的全部文件
+                              34751 文件 / 199.6 MB / 快照 commit bf97326d6（v1.3.3）
+      .gitmodules：
+        [submodule "Stronghold-Protocol"]
+            path = Stronghold-Protocol
+            url = https://github.com/xiaonian-chen/Stronghold-Protocol-Change.git
+            branch = core
+      → git clone --recurse-submodules 一条命令拿到全部内容，不需要第二个仓库
+
+    子模块 remotes（并存，互不干扰，更新路径未切断）：
+      upstream  https://github.com/sganggs/Stronghold-Protocol.git   原作者，更新用
+      origin    本仓库 core 分支                                     发布用
+
+    core 快照制作流程（每次上游更新后执行一次，详见非上游文件功能记录第十节）：
+      1) 子模块内 git fetch upstream --tags
+      2) 在已合并完成的分支上走完本指南五层流程
+      3) git checkout core
+      4) git read-tree -u --reset <已合并完成的分支>   ← 用合并后的树替换 core 工作树
+      5) git add -A && git commit -m "core: vX.Y.Z 游戏本体快照（上游 <tag> + 核心层改动）"
+      6) git push origin core
+      7) 主仓库 git add Stronghold-Protocol 更新 gitlink → 提交 main/text
+
+    ⚠ 快照必须是「链」：父提交 = core 上一次快照。每次新建孤立根提交会导致
+      远端没有基准对象，每次都要全量重传
+
+    ⚠ 首次推送代价实测：约 790 MB。远端 core 为空、没有上游历史基准，
+      本地按上游历史做的增量压缩 blob 必须全部还原成完整对象再发送。
+      后续快照以 core 上一提交为父 → 远端已有基准 → 推送量回到 MB 级
+
+    ⚠ 历史 tag 不可修复：v1.0 / v1.1 / v1.2 / v1.3.1-beta / v1.3.2-beta 的 gitlink
+      仍指向本机私有 commit，下载后子模块为空。只有重打 tag 指向 core 上的 commit
+      才能解决（v1.3.3-beta 已重打）
+
+    验收：
+      · git ls-remote origin core 返回快照 commit（不是只存在于本机）
+      · 主仓库 git submodule status 显示的 commit == 远端 core HEAD
+      · 全新目录 git clone --recurse-submodules 后 Stronghold-Protocol/ 非空
+      · 子模块 git fetch upstream --tags 仍正常（原作者更新路径不受影响）
+      · Releases 挂本机打包的完整 zip（含 node/），GitHub 自动源码包不能直接玩
 
 16. 版本主机钩子继承 + 文档口径统一（2026-10-31）
     背景：默认版本（第二期下半）四个 mod 全部正常，但切到
